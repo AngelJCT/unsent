@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/*
+ * Unsent. brand tokens (brand-guidelines.md §5).
+ * Dark mode inverts canvas/ink; burn orange never changes and is
+ * never decorative — heat moments only. No gradients, no blue.
+ */
+:root {
+  --canvas: #fffbeb; /* Candlelight */
+  --ink: #1c1917; /* Midnight Stone */
+  --paper: #ffffff;
+  --paper-border: #e7e5e4;
+  --ash: #a8a29e;
+  --ash-deep: #78716c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #1c1917;
+    --ink: #fffbeb;
+    --paper: #292524;
+    --paper-border: #44403c;
+    --ash: #78716c;
+    --ash-deep: #a8a29e;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-paper-border: var(--paper-border);
+  --color-ash: var(--ash);
+  --color-ash-deep: var(--ash-deep);
+  --color-burn: #c2410c; /* Burn Orange — heat only */
+  --color-ember: #fed7aa;
+
+  --font-brand: var(--font-newsreader), Georgia, serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+  --font-receipt: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}

@@ -1,0 +1,56 @@
+/**
+ * Client side of the engine call (plan W1.4). The draft lives in React
+ * state and this one request — never in storage, never in logs.
+ */
+import { getDeviceToken } from "@/lib/local-state";
+
+export type EngineTones = { warm: string; final: string; unbothered: string };
+// Parts are optional: the server only returns what the caller is entitled
+// to (generate-on-pay). The mirror and crisis flag always come back.
+export type EngineResult = {
+  mirror: string;
+  crisis: boolean;
+  rewrite?: string;
+  tones?: EngineTones;
+};
+export type EngineWant = { rewrite: boolean; tones: boolean };
+export type EngineError =
+  | "rate_limited"
+  | "engine_unavailable"
+  | "bad_request"
+  | "network";
+
+export async function requestRewrite(input: {
+  draft: string;
+  recipient?: string | null;
+  feeling?: string | null;
+  goal?: string | null;
+  want?: EngineWant;
+}): Promise<
+  { ok: true; result: EngineResult } | { ok: false; error: EngineError }
+> {
+  try {
+    const res = await fetch("/api/rewrite", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-device-token": getDeviceToken(),
+      },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      const error = body?.error;
+      return {
+        ok: false,
+        error:
+          error === "rate_limited" || error === "bad_request"
+            ? error
+            : "engine_unavailable",
+      };
+    }
+    return { ok: true, result: (await res.json()) as EngineResult };
+  } catch {
+    return { ok: false, error: "network" };
+  }
+}

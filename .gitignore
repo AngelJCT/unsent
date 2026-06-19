@@ -1,0 +1,11 @@
+# OS junk
+.DS_Store
+
+# Local tooling / editor state (not shared)
+.claude/
+
+# Defensive — env files & logs never belong in git
+# (web/ has its own .gitignore for node_modules, .next, .env*)
+.env
+.env.*
+*.log

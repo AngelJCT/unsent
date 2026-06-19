@@ -1,0 +1,345 @@
+<!DOCTYPE html><html><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;"><meta http-equiv="x-dns-prefetch-control" content="off"><script src="https://puc.poecdn.net/authenticated_preview_page/standard.3ef2c256959faf5a756d.js"></script>
+    <meta charset="utf-8">
+    <title>Poe</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://puc.poecdn.net/authenticated_preview_page/disableWebRTC.9710cebe07429a9e8e06.js"></script><meta name="x-poe-allow-downloads" content="true"><meta name="x-poe-datastore-behavior" content="disabled"><script src="https://puc.poecdn.net/authenticated_preview_page/tw.50ec1b0612bf5b0c30a5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/deps.faccd16000d314dc16d5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/exports.b0f0f482cdeb5302b0b9.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/renderer.75c73ae6b4235f62945a.js"></script><script>Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }var _react = require('react'); var _react2 = _interopRequireDefault(_react);
+var _framermotion = require('framer-motion');
+
+
+
+var _lucidereact = require('lucide-react');
+
+const RECIPIENTS = [
+  { id: "ex", label: "My ex", icon: _lucidereact.Flame, color: "bg-rose-100 text-rose-600" },
+  { id: "coworker", label: "A coworker", icon: _lucidereact.Briefcase, color: "bg-blue-100 text-blue-600" },
+  { id: "boss", label: "My boss", icon: _lucidereact.Crown, color: "bg-amber-100 text-amber-600" },
+  { id: "landlord", label: "My landlord", icon: _lucidereact.Home, color: "bg-emerald-100 text-emerald-600" },
+  { id: "family", label: "Family member", icon: _lucidereact.Users, color: "bg-violet-100 text-violet-600" },
+  { id: "date", label: "Someone I'm dating", icon: _lucidereact.Heart, color: "bg-pink-100 text-pink-600" },
+];
+
+const OUTCOMES = {
+  ex: ["Get closure", "Set a boundary", "Sound unbothered", "Co-parent civilly"],
+  coworker: ["Push back politely", "Set a boundary", "Clear the air", "Stay HR-safe"],
+  boss: ["Negotiate confidently", "Push back politely", "Ask for something", "Decline gracefully"],
+  landlord: ["Request a fix", "Negotiate rent", "Dispute a charge", "Stay firm but fair"],
+  family: ["Set a boundary", "Keep the peace", "Say no with love", "Address a hurt"],
+  date: ["Sound less eager", "Define the relationship", "Let them down gently", "Re-spark interest"],
+};
+
+const SAMPLE_DRAFT =
+  "I can't believe you're doing this again. You ALWAYS do this and honestly I'm so done with it. Whatever, do what you want.";
+
+const REWRITE_PRIMARY =
+  "I've noticed this pattern come up again, and I want to be honest — it's been hard for me. I'd rather talk about it directly than let it build up. Can we find a time?";
+
+const REWRITE_LOCKED = [
+  { tone: "Firm & Final", preview: "I've made my decision and I won't be revisiting it. I wish you well..." },
+  { tone: "Warm but Clear", preview: "I care about you, and that's exactly why I need to say this plainly..." },
+  { tone: "Short & Unbothered", preview: "Noted. I'll be doing things differently going forward..." },
+];
+
+const screenVariants = {
+  enter: { x: 60, opacity: 0 },
+  center: { x: 0, opacity: 1 },
+  exit: { x: -60, opacity: 0 },
+};
+
+function ProgressDots({ step, total }) {
+  return (
+    _react2.default.createElement('div', { className: "flex gap-1.5 justify-center"  ,}
+      , Array.from({ length: total }).map((_, i) => (
+        _react2.default.createElement('div', {
+          key: i,
+          className: `h-1.5 rounded-full transition-all duration-300 ${
+            i === step ? "w-6 bg-indigo-600" : "w-1.5 bg-gray-300"
+          }`,}
+        )
+      ))
+    )
+  );
+}
+
+ function SayItBetterPrototype() {
+  const [screen, setScreen] = _react.useState.call(void 0, "welcome");
+  const [recipient, setRecipient] = _react.useState.call(void 0, null);
+  const [outcome, setOutcome] = _react.useState.call(void 0, null);
+  const [draft, setDraft] = _react.useState.call(void 0, "");
+  const [loading, setLoading] = _react.useState.call(void 0, false);
+  const [typed, setTyped] = _react.useState.call(void 0, "");
+  const [plan, setPlan] = _react.useState.call(void 0, "annual");
+
+  // typewriter effect on result screen
+  _react.useEffect.call(void 0, () => {
+    if (screen !== "result") return;
+    setTyped("");
+    let i = 0;
+    const t = setInterval(() => {
+      i += 2;
+      setTyped(REWRITE_PRIMARY.slice(0, i));
+      if (i >= REWRITE_PRIMARY.length) clearInterval(t);
+    }, 18);
+    return () => clearInterval(t);
+  }, [screen]);
+
+  const stepIndex = { recipient: 0, outcome: 1, compose: 2 }[screen];
+
+  const goGenerate = () => {
+    setLoading(true);
+    setScreen("loading");
+    setTimeout(() => {
+      setLoading(false);
+      setScreen("result");
+    }, 1800);
+  };
+
+  const back = () => {
+    if (screen === "outcome") setScreen("recipient");
+    else if (screen === "compose") setScreen("outcome");
+    else if (screen === "recipient") setScreen("welcome");
+  };
+
+  return (
+    _react2.default.createElement('div', { className: "min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans"      ,}
+      /* Phone frame */
+      , _react2.default.createElement('div', { className: "w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200 relative"        , style: { minHeight: "640px" },}
+        /* Status bar */
+        , _react2.default.createElement('div', { className: "h-8 bg-white flex items-center justify-center"    ,}
+          , _react2.default.createElement('div', { className: "w-20 h-1.5 bg-gray-200 rounded-full"   ,} )
+        )
+
+        , _react2.default.createElement(_framermotion.AnimatePresence, { mode: "wait",}
+          /* ───────── WELCOME ───────── */
+          , screen === "welcome" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "welcome", variants: screenVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.25 }, className: "px-6 pt-10 pb-8 flex flex-col items-center text-center"      , style: { minHeight: "600px" },}
+              , _react2.default.createElement('div', { className: "w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg"        ,}
+                , _react2.default.createElement(_lucidereact.Sparkles, { className: "text-white", size: 30,} )
+              )
+              , _react2.default.createElement('h1', { className: "text-2xl font-bold text-gray-900 mb-3"   ,}, "Say It Better"  )
+              , _react2.default.createElement('p', { className: "text-gray-500 leading-relaxed mb-2"  ,}, "Stop rewriting that message for the 14th time."
+
+              )
+              , _react2.default.createElement('p', { className: "text-gray-500 leading-relaxed mb-8"  ,}, "Paste your draft. Get the version that says what you "
+                          , _react2.default.createElement('span', { className: "font-semibold text-gray-700" ,}, "actually"), " mean — calm, clear, and impossible to use against you."
+              )
+              , _react2.default.createElement('div', { className: "flex items-center gap-1 mb-2"   ,}
+                , [...Array(5)].map((_, i) => _react2.default.createElement(_lucidereact.Star, { key: i, size: 16, className: "text-amber-400 fill-amber-400" ,} ))
+              )
+              , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-auto"  ,}, "\"Saved my co-parenting sanity\" — App Store review"       )
+              , _react2.default.createElement('button', { onClick: () => setScreen("recipient"), className: "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl transition-colors shadow-md mt-8"         ,}, "Fix my message"
+
+              )
+              , _react2.default.createElement('p', { className: "text-xs text-gray-400 mt-3"  ,}, "First rewrite is free. No account needed."      )
+            )
+          )
+
+          /* ───────── STEP 1: RECIPIENT ───────── */
+          , screen === "recipient" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "recipient", variants: screenVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.25 }, className: "px-6 pt-2 pb-8"  , style: { minHeight: "600px" },}
+              , _react2.default.createElement('div', { className: "flex items-center justify-between mb-4"   ,}
+                , _react2.default.createElement('button', { onClick: back, className: "p-2 -ml-2 text-gray-400 hover:text-gray-600"   ,}, _react2.default.createElement(_lucidereact.ChevronLeft, { size: 22,} ))
+                , _react2.default.createElement(ProgressDots, { step: 0, total: 3,} )
+                , _react2.default.createElement('div', { className: "w-8",} )
+              )
+              , _react2.default.createElement('h2', { className: "text-xl font-bold text-gray-900 mb-1"   ,}, "Who are you messaging?"   )
+              , _react2.default.createElement('p', { className: "text-sm text-gray-500 mb-6"  ,}, "We'll tune the tone for the relationship."      )
+              , _react2.default.createElement('div', { className: "grid grid-cols-2 gap-3"  ,}
+                , RECIPIENTS.map((r) => {
+                  const Icon = r.icon;
+                  return (
+                    _react2.default.createElement('button', {
+                      key: r.id,
+                      onClick: () => { setRecipient(r); setOutcome(null); setScreen("outcome"); },
+                      className: "flex flex-col items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left"           ,}
+
+                      , _react2.default.createElement('div', { className: `w-10 h-10 rounded-xl flex items-center justify-center ${r.color}`,}
+                        , _react2.default.createElement(Icon, { size: 20,} )
+                      )
+                      , _react2.default.createElement('span', { className: "text-sm font-semibold text-gray-800"  ,}, r.label)
+                    )
+                  );
+                })
+              )
+            )
+          )
+
+          /* ───────── STEP 2: OUTCOME ───────── */
+          , screen === "outcome" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "outcome", variants: screenVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.25 }, className: "px-6 pt-2 pb-8"  , style: { minHeight: "600px" },}
+              , _react2.default.createElement('div', { className: "flex items-center justify-between mb-4"   ,}
+                , _react2.default.createElement('button', { onClick: back, className: "p-2 -ml-2 text-gray-400 hover:text-gray-600"   ,}, _react2.default.createElement(_lucidereact.ChevronLeft, { size: 22,} ))
+                , _react2.default.createElement(ProgressDots, { step: 1, total: 3,} )
+                , _react2.default.createElement('div', { className: "w-8",} )
+              )
+              , _react2.default.createElement('h2', { className: "text-xl font-bold text-gray-900 mb-1"   ,}, "What do you want out of this?"      )
+              , _react2.default.createElement('p', { className: "text-sm text-gray-500 mb-6"  ,}, "Messaging " , _optionalChain([recipient, 'optionalAccess', _2 => _2.label, 'access', _3 => _3.toLowerCase, 'call', _4 => _4()]), " — pick your goal."    )
+              , _react2.default.createElement('div', { className: "flex flex-col gap-3"  ,}
+                , (OUTCOMES[_optionalChain([recipient, 'optionalAccess', _5 => _5.id])] || []).map((o) => (
+                  _react2.default.createElement('button', {
+                    key: o,
+                    onClick: () => { setOutcome(o); setScreen("compose"); },
+                    className: "flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left"          ,}
+
+                    , _react2.default.createElement('span', { className: "text-sm font-semibold text-gray-800"  ,}, o)
+                    , _react2.default.createElement(_lucidereact.Zap, { size: 16, className: "text-indigo-400",} )
+                  )
+                ))
+              )
+            )
+          )
+
+          /* ───────── STEP 3: COMPOSE ───────── */
+          , screen === "compose" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "compose", variants: screenVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.25 }, className: "px-6 pt-2 pb-8 flex flex-col"    , style: { minHeight: "600px" },}
+              , _react2.default.createElement('div', { className: "flex items-center justify-between mb-4"   ,}
+                , _react2.default.createElement('button', { onClick: back, className: "p-2 -ml-2 text-gray-400 hover:text-gray-600"   ,}, _react2.default.createElement(_lucidereact.ChevronLeft, { size: 22,} ))
+                , _react2.default.createElement(ProgressDots, { step: 2, total: 3,} )
+                , _react2.default.createElement('div', { className: "w-8",} )
+              )
+              , _react2.default.createElement('h2', { className: "text-xl font-bold text-gray-900 mb-1"   ,}, "Paste your draft"  )
+              , _react2.default.createElement('p', { className: "text-sm text-gray-500 mb-4"  ,}, "Angry, rambling, desperate — doesn't matter. That's our job."        )
+              , _react2.default.createElement('textarea', {
+                value: draft,
+                onChange: (e) => setDraft(e.target.value),
+                placeholder: "Type or paste the message you're about to send..."        ,
+                className: "w-full flex-1 p-4 rounded-2xl border-2 border-gray-100 focus:border-indigo-400 focus:outline-none text-sm text-gray-800 resize-none mb-3"           ,
+                style: { minHeight: "160px" },}
+              )
+              , _react2.default.createElement('button', { onClick: () => setDraft(SAMPLE_DRAFT), className: "text-xs text-indigo-500 font-medium mb-4 self-start"    ,}, "Try a sample draft →"
+
+              )
+              , _react2.default.createElement('button', {
+                onClick: goGenerate,
+                disabled: !draft.trim(),
+                className: "w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-4 rounded-2xl transition-colors shadow-md flex items-center justify-center gap-2"              ,}
+
+                , _react2.default.createElement(_lucidereact.Sparkles, { size: 18,} ), " Rewrite it"
+              )
+            )
+          )
+
+          /* ───────── LOADING ───────── */
+          , screen === "loading" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "loading", initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, className: "px-6 flex flex-col items-center justify-center text-center"     , style: { minHeight: "600px" },}
+              , _react2.default.createElement(_framermotion.motion.div, { animate: { rotate: 360 }, transition: { repeat: Infinity, duration: 1.2, ease: "linear" }, className: "w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full mb-6"      ,} )
+              , _react2.default.createElement('p', { className: "text-gray-700 font-semibold mb-1"  ,}, "Reading between the lines..."   )
+              , _react2.default.createElement('p', { className: "text-sm text-gray-400" ,}, "Keeping your point. Losing the regret."     )
+            )
+          )
+
+          /* ───────── RESULT (aha moment) ───────── */
+          , screen === "result" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "result", variants: screenVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.25 }, className: "px-6 pt-4 pb-8 flex flex-col"    , style: { minHeight: "600px" },}
+              , _react2.default.createElement('div', { className: "flex items-center gap-2 mb-4"   ,}
+                , _react2.default.createElement('div', { className: "w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center"      ,}
+                  , _react2.default.createElement(_lucidereact.Check, { size: 15, className: "text-emerald-600",} )
+                )
+                , _react2.default.createElement('span', { className: "text-sm font-semibold text-gray-700"  ,}, "Your free rewrite"  )
+              )
+
+              /* Before */
+              , _react2.default.createElement('div', { className: "bg-gray-50 rounded-2xl p-3 mb-3 border border-gray-100"     ,}
+                , _react2.default.createElement('p', { className: "text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1"     ,}, "Before")
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 line-through leading-relaxed"   ,}, draft.slice(0, 110), draft.length > 110 ? "…" : "")
+              )
+
+              /* After */
+              , _react2.default.createElement('div', { className: "bg-indigo-50 rounded-2xl p-4 mb-4 border-2 border-indigo-200"     ,}
+                , _react2.default.createElement('p', { className: "text-xs font-semibold text-indigo-400 uppercase tracking-wide mb-1"     ,}, "After — Calm & Direct"    )
+                , _react2.default.createElement('p', { className: "text-sm text-gray-800 leading-relaxed"  ,}, typed, _react2.default.createElement('span', { className: "animate-pulse",}, "▍"))
+              )
+
+              /* Locked variants */
+              , _react2.default.createElement('p', { className: "text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2"     ,}, "3 more tones"  )
+              , _react2.default.createElement('div', { className: "flex flex-col gap-2 mb-5"   ,}
+                , REWRITE_LOCKED.map((v) => (
+                  _react2.default.createElement('button', { key: v.tone, onClick: () => setScreen("paywall"), className: "relative bg-white border border-gray-200 rounded-xl p-3 text-left overflow-hidden"       ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-semibold text-gray-700 mb-0.5"   ,}, v.tone)
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400 blur-sm select-none"   ,}, v.preview)
+                    , _react2.default.createElement('div', { className: "absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 rounded-full p-1.5"      ,}
+                      , _react2.default.createElement(_lucidereact.Lock, { size: 12, className: "text-white",} )
+                    )
+                  )
+                ))
+              )
+
+              , _react2.default.createElement('button', { onClick: () => setScreen("paywall"), className: "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl transition-colors shadow-md mt-auto"         ,}, "Unlock all tones"
+
+              )
+            )
+          )
+
+          /* ───────── PAYWALL ───────── */
+          , screen === "paywall" && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "paywall", initial: { y: 60, opacity: 0 }, animate: { y: 0, opacity: 1 }, exit: { y: 60, opacity: 0 }, transition: { duration: 0.3 }, className: "px-6 pt-4 pb-6 flex flex-col"    , style: { minHeight: "600px" },}
+              , _react2.default.createElement('button', { onClick: () => setScreen("result"), className: "self-end text-gray-300 hover:text-gray-500 text-xl leading-none p-1"     ,}, "✕")
+
+              , _react2.default.createElement('div', { className: "text-center mb-5" ,}
+                , _react2.default.createElement('div', { className: "w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md"         ,}
+                  , _react2.default.createElement(_lucidereact.Sparkles, { className: "text-white", size: 22,} )
+                )
+                , _react2.default.createElement('h2', { className: "text-xl font-bold text-gray-900 mb-1"   ,}, "Never send a regret again"    )
+                , _react2.default.createElement('p', { className: "text-sm text-gray-500" ,}, "Unlimited rewrites, every tone, full history."     )
+              )
+
+              , _react2.default.createElement('div', { className: "flex flex-col gap-2 mb-5"   ,}
+                , ["Unlimited rewrites in every tone", "Remembers each relationship's context", "Reply analyzer: decode their message", "Regret-check before you hit send"].map((f) => (
+                  _react2.default.createElement('div', { key: f, className: "flex items-center gap-2.5"  ,}
+                    , _react2.default.createElement('div', { className: "w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0"       ,}
+                      , _react2.default.createElement(_lucidereact.Check, { size: 12, className: "text-emerald-600",} )
+                    )
+                    , _react2.default.createElement('span', { className: "text-sm text-gray-700" ,}, f)
+                  )
+                ))
+              )
+
+              /* Plans */
+              , _react2.default.createElement('div', { className: "flex flex-col gap-3 mb-4"   ,}
+                , _react2.default.createElement('button', { onClick: () => setPlan("annual"), className: `relative p-4 rounded-2xl border-2 text-left transition-all ${plan === "annual" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`,}
+                  , _react2.default.createElement('span', { className: "absolute -top-2.5 right-4 bg-indigo-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full"         ,}, "SAVE 78%" )
+                  , _react2.default.createElement('div', { className: "flex items-center justify-between"  ,}
+                    , _react2.default.createElement('div', null
+                      , _react2.default.createElement('p', { className: "font-bold text-gray-900 text-sm"  ,}, "Annual")
+                      , _react2.default.createElement('p', { className: "text-xs text-gray-500" ,}, "$39.99/year · $0.77/week"  )
+                    )
+                    , _react2.default.createElement('div', { className: `w-5 h-5 rounded-full border-2 flex items-center justify-center ${plan === "annual" ? "border-indigo-600 bg-indigo-600" : "border-gray-300"}`,}
+                      , plan === "annual" && _react2.default.createElement(_lucidereact.Check, { size: 12, className: "text-white",} )
+                    )
+                  )
+                )
+                , _react2.default.createElement('button', { onClick: () => setPlan("weekly"), className: `p-4 rounded-2xl border-2 text-left transition-all ${plan === "weekly" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`,}
+                  , _react2.default.createElement('div', { className: "flex items-center justify-between"  ,}
+                    , _react2.default.createElement('div', null
+                      , _react2.default.createElement('p', { className: "font-bold text-gray-900 text-sm"  ,}, "Weekly")
+                      , _react2.default.createElement('p', { className: "text-xs text-gray-500" ,}, "$6.99/week · cancel anytime"   )
+                    )
+                    , _react2.default.createElement('div', { className: `w-5 h-5 rounded-full border-2 flex items-center justify-center ${plan === "weekly" ? "border-indigo-600 bg-indigo-600" : "border-gray-300"}`,}
+                      , plan === "weekly" && _react2.default.createElement(_lucidereact.Check, { size: 12, className: "text-white",} )
+                    )
+                  )
+                )
+              )
+
+              , _react2.default.createElement('button', { className: "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl transition-colors shadow-md mb-3"         ,}
+                , plan === "annual" ? "Start free, then $39.99/yr" : "Continue — $6.99/wk"
+              )
+
+              , _react2.default.createElement('div', { className: "flex items-center justify-center gap-1.5 mb-2"    ,}
+                , _react2.default.createElement(_lucidereact.Shield, { size: 13, className: "text-gray-400",} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400" ,}, "3-day free trial on annual · cancel anytime"       )
+              )
+              , _react2.default.createElement('div', { className: "flex justify-center gap-4 text-xs text-gray-300"    ,}
+                , _react2.default.createElement('button', null, "Restore"), _react2.default.createElement('button', null, "Terms"), _react2.default.createElement('button', null, "Privacy")
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+} exports.default = SayItBetterPrototype;
+</script></head>
+  <body>
+  
+
+<div id="preview-app"></div></body></html>
