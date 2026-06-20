@@ -1,5 +1,5 @@
 /**
- * Unsent. design tokens — the single source of truth shared with the
+ * Unsend. design tokens — the single source of truth shared with the
  * future Expo renderer (dev plan §1: one design system, two renderers).
  * The CSS theme in globals.css mirrors these; change both together.
  */

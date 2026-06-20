@@ -3,8 +3,8 @@ import Link from "next/link";
 import Wordmark from "@/components/Wordmark";
 
 export const metadata: Metadata = {
-  title: "Terms — Unsent.",
-  description: "The terms for using Unsent.",
+  title: "Terms — Unsend.",
+  description: "The terms for using Unsend.",
 };
 
 const UPDATED = "June 14, 2026";
@@ -12,7 +12,7 @@ const UPDATED = "June 14, 2026";
 export default function TermsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-12">
-      <Link href="/" aria-label="Back to Unsent">
+      <Link href="/" aria-label="Back to Unsend">
         <Wordmark className="text-2xl" />
       </Link>
 
@@ -24,29 +24,29 @@ export default function TermsPage() {
       </p>
 
       <p className="mt-8 text-base leading-relaxed text-ink">
-        Unsent is operated by Angel J. Carrión (&ldquo;we,&rdquo;
-        &ldquo;us&rdquo;). By using Unsent, you agree to these terms. They&apos;re
+        Unsend is operated by Angel J. Carrión (&ldquo;we,&rdquo;
+        &ldquo;us&rdquo;). By using Unsend, you agree to these terms. They&apos;re
         written plainly on purpose.
       </p>
 
-      <Section title="What Unsent is">
+      <Section title="What Unsend is">
         <p>
-          Unsent helps you rewrite a message before you send it. It shows how
+          Unsend helps you rewrite a message before you send it. It shows how
           your draft is likely to read and offers calmer versions. You always
-          decide what to send — Unsent never sends anything on your behalf.
+          decide what to send — Unsend never sends anything on your behalf.
         </p>
       </Section>
 
       <Section title="Not a crisis, medical, or mental-health service">
         <p>
-          Unsent is a writing tool, not therapy, counseling, medical advice, or
+          Unsend is a writing tool, not therapy, counseling, medical advice, or
           an emergency service, and using it creates no professional
           relationship. It is not a substitute for professional help.{" "}
           <strong className="font-semibold text-ink">
             If you are in crisis or may be in danger, contact your local
             emergency number or a crisis line right away.
           </strong>{" "}
-          Unsent may surface support resources, but it cannot and does not
+          Unsend may surface support resources, but it cannot and does not
           provide crisis intervention.
         </p>
       </Section>
@@ -55,7 +55,7 @@ export default function TermsPage() {
         <p>
           There&apos;s no sign-up. Your device is your access; your anonymous
           device token represents your standing (including Pro). Keep your
-          device secure — anyone using it can use your Unsent.
+          device secure — anyone using it can use your Unsend.
         </p>
       </Section>
 
@@ -101,7 +101,7 @@ export default function TermsPage() {
 
       <Section title="Acceptable use">
         <p>
-          Use Unsent for your own messages and lawful purposes. Don&apos;t use
+          Use Unsend for your own messages and lawful purposes. Don&apos;t use
           it to harass, threaten, or harm others, to break the law, or to
           attempt to disrupt or reverse-engineer the service.
         </p>
@@ -109,7 +109,7 @@ export default function TermsPage() {
 
       <Section title="Your content & the rewrites">
         <p>
-          Your draft is yours. The calmer versions Unsent produces are yours to
+          Your draft is yours. The calmer versions Unsend produces are yours to
           use freely. The app, its name, design, and brand remain ours. See our{" "}
           <Link href="/privacy" className="text-burn underline underline-offset-2">
             Privacy page
@@ -120,9 +120,9 @@ export default function TermsPage() {
 
       <Section title="The service is provided “as is”">
         <p>
-          Unsent uses AI to rewrite messages, and AI output can be imperfect or
+          Unsend uses AI to rewrite messages, and AI output can be imperfect or
           unexpected. You are responsible for reviewing and deciding what you
-          send. To the fullest extent permitted by law, Unsent is provided
+          send. To the fullest extent permitted by law, Unsend is provided
           without warranties of any kind, and we aren&apos;t liable for
           indirect, incidental, or consequential damages, or for anything you
           choose to send.

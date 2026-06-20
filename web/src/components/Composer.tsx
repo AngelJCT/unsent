@@ -103,7 +103,7 @@ const RECIPIENT_NOTES: Record<CategoryId, string> = {
 };
 
 // The locked premium: alternate registers of the same message, named in
-// Unsent's voice (not the generic "Firm & Final"). Keys match EngineTones.
+// Unsend's voice (not the generic "Firm & Final"). Keys match EngineTones.
 const TONES: Array<{ key: keyof EngineTones; label: string; note: string }> = [
   { key: "warm", label: "Warm", note: "kind — and it still lands" },
   { key: "final", label: "Final", note: "said once, and done" },
@@ -1010,7 +1010,7 @@ function ResultScreen({
         </section>
       </div>
 
-      {/* The locked premium: alternate tones, in Unsent's voice. */}
+      {/* The locked premium: alternate tones, in Unsend's voice. */}
       <section className="mt-5">
         <div className="flex items-center justify-between">
           <h2 className="font-receipt text-xs uppercase tracking-wider text-ash">
@@ -1557,7 +1557,7 @@ function ReceiptPanel({
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "unsent-receipt.png";
+    anchor.download = "unsend-receipt.png";
     anchor.click();
     URL.revokeObjectURL(url);
     recordFunnelEvent("receipt_saved");
@@ -1567,7 +1567,7 @@ function ReceiptPanel({
   async function shareReceipt() {
     const blob = await receiptBlob();
     if (!blob) return;
-    const file = new File([blob], "unsent-receipt.png", { type: "image/png" });
+    const file = new File([blob], "unsend-receipt.png", { type: "image/png" });
     const nav = navigator as Navigator & {
       canShare?: (data: ShareData) => boolean;
     };
@@ -1576,7 +1576,7 @@ function ReceiptPanel({
       if (navigator.share && nav.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: "Unsent.",
+          title: "Unsend.",
           text: "Let them wonder what it said.",
         });
         recordFunnelEvent("receipt_shared");
@@ -1585,7 +1585,7 @@ function ReceiptPanel({
       }
       if (navigator.share) {
         await navigator.share({
-          title: "Unsent.",
+          title: "Unsend.",
           text: "I burned a message before it burned me.",
         });
         recordFunnelEvent("receipt_shared");
@@ -1615,7 +1615,7 @@ function ReceiptPanel({
       `}</style>
       <div className="mx-auto mt-3 w-full max-w-sm border border-paper-border bg-paper px-6 py-7 font-receipt text-xs text-ink shadow-sm">
         <div className="text-center">
-          <div className="text-sm font-bold tracking-[0.3em]">UNSENT</div>
+          <div className="text-sm font-bold tracking-[0.3em]">UNSEND</div>
           <div className="mt-1 text-ash">OFFICIAL RECORD OF RESTRAINT</div>
           <div className="mt-1 text-ash">TO: {categoryLabel(category).toUpperCase()}</div>
         </div>
@@ -1727,7 +1727,7 @@ async function buildReceiptBlob(
   ctx.textAlign = "center";
   ctx.fillStyle = "#1c1917";
   ctx.font = "700 34px ui-monospace, Menlo, monospace";
-  ctx.fillText("UNSENT", width / 2, 145);
+  ctx.fillText("UNSEND", width / 2, 145);
   ctx.font = "500 18px ui-monospace, Menlo, monospace";
   ctx.fillStyle = "#78716c";
   ctx.fillText("OFFICIAL RECORD OF RESTRAINT", width / 2, 180);

@@ -154,7 +154,7 @@ async function callOpenRouter(
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "x-title": "Unsent",
+        "x-title": "Unsend",
       },
       body: JSON.stringify({
         model: models[0],

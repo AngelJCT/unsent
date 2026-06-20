@@ -3,8 +3,8 @@ import Link from "next/link";
 import Wordmark from "@/components/Wordmark";
 
 export const metadata: Metadata = {
-  title: "Privacy — Unsent.",
-  description: "What Unsent does and doesn't do with your words.",
+  title: "Privacy — Unsend.",
+  description: "What Unsend does and doesn't do with your words.",
 };
 
 const UPDATED = "June 14, 2026";
@@ -12,7 +12,7 @@ const UPDATED = "June 14, 2026";
 export default function PrivacyPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-12">
-      <Link href="/" aria-label="Back to Unsent">
+      <Link href="/" aria-label="Back to Unsend">
         <Wordmark className="text-2xl" />
       </Link>
 
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
       <p className="mt-8 text-base leading-relaxed text-ink">
         The short version: your words are sacred. We don&apos;t store them, we
         can&apos;t read them, and we never use them to train anything. Most of
-        Unsent runs on your own device. Here&apos;s exactly what happens.
+        Unsend runs on your own device. Here&apos;s exactly what happens.
       </p>
 
       <Section title="What we never do">
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
 
       <Section title="Children">
         <p>
-          Unsent isn&apos;t directed to anyone under 16, and we don&apos;t
+          Unsend isn&apos;t directed to anyone under 16, and we don&apos;t
           knowingly collect information from them.
         </p>
       </Section>
@@ -131,7 +131,7 @@ export default function PrivacyPage() {
           .
         </p>
         <p className="mt-3">
-          Unsent is operated by Angel J. Carrión from the Commonwealth of Puerto
+          Unsend is operated by Angel J. Carrión from the Commonwealth of Puerto
           Rico. See our{" "}
           <Link href="/terms" className="text-burn underline underline-offset-2">
             Terms
