@@ -21,12 +21,12 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Unsent.",
+  title: "Unsend.",
   description: "For everything you almost said.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Unsent.",
+    title: "Unsend.",
     statusBarStyle: "default",
   },
 };

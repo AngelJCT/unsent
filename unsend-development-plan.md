@@ -1,4 +1,4 @@
-# Unsent. — Development Plan
+# Unsend. — Development Plan
 
 **v1.0 — From prototype to the keyboard.**
 
@@ -10,7 +10,7 @@ Every other product doc you've written argues the *why*. This one sequences the 
 
 > The privacy architecture **is** the business model. The thing you refuse to do — read, store, or show the message — is simultaneously the paywall's trust, the Vault's intimacy, and the Receipt's mystery.
 
-That isn't a slogan here; it's an engineering constraint that decides your backend shape and which claims you can honestly make. The core promise is simple and bulletproof: **Unsent never stores what users write, and you the developer can't read it.** A draft passes through memory to get rewritten and is gone — there's no database, no log, no record. Wherever a build decision touches that promise, the promise wins.
+That isn't a slogan here; it's an engineering constraint that decides your backend shape and which claims you can honestly make. The core promise is simple and bulletproof: **Unsend never stores what users write, and you the developer can't read it.** A draft passes through memory to get rewritten and is gone — there's no database, no log, no record. Wherever a build decision touches that promise, the promise wins.
 
 The plan ships in phases, and each phase ends at a **validation gate** — a metric that has to clear before the next phase is allowed to start. You're a small team; the gates exist so you don't build Phase 3 on a Phase 1 that didn't actually work.
 
@@ -128,7 +128,7 @@ Keep it as small as the architecture allows.
 - **Entitlements** — RevenueCat. Wire it from day one even on web (it ingests Stripe receipts), so a user who pays on the PWA keeps Pro when the native app ships. This avoids the classic "paid on web, locked out on app" migration nightmare.
 - **Aggregate counters** — server, content-free, append-only ticks for the weekly monument.
 
-No user table. No message table. No email at signup. The first identity event in a user's life with Unsent is a *purchase*, and the App Store / Play handle that identity for you.
+No user table. No message table. No email at signup. The first identity event in a user's life with Unsend is a *purchase*, and the App Store / Play handle that identity for you.
 
 ---
 
@@ -152,7 +152,7 @@ No user table. No message table. No email at signup. The first identity event in
 **W0.2 — Design tokens & primitives**
 - [ ] Extract the prototype's palette/type/spacing into a tokens file (`tokens.ts` or CSS vars): Candlelight `amber-50`, Midnight Stone `stone-900`, Burn Orange `orange-700`, Ember `orange-200/300`, Ash `stone-400/500/600`. This is the artifact that survives the NativeWind jump in Phase 3 — do it now, once.
 - [ ] Wire the three type roles: serif italic (headlines/ritual), humanist sans (UI/body), mono (receipts/stats). Load the actual faces (Newsreader/Instrument Serif, Inter, IBM Plex Mono or chosen equivalents).
-- [ ] Build the wordmark component (`Unsent` + orange period) as the one reusable lockup.
+- [ ] Build the wordmark component (`Unsend` + orange period) as the one reusable lockup.
 
 **W0.3 — Engine proxy spike (OpenRouter)**
 - [ ] Create the edge route (`/api/rewrite`) — stateless, no logging middleware on this path, IP discarded.
@@ -322,7 +322,7 @@ No user table. No message table. No email at signup. The first identity event in
 **Goal:** catch the rage *inside* the messaging app, before the app-switch — the one move that removes the last step where users still send the thing. Genuinely hard, which is why it's last.
 
 **W4.1 — iOS Share Extension**
-- [ ] Build a Share Extension so a user can select draft text in Messages and send it to Unsent's mirror without fully leaving the conversation.
+- [ ] Build a Share Extension so a user can select draft text in Messages and send it to Unsend's mirror without fully leaving the conversation.
 - [ ] Reuse the shared engine client + the same no-log proxy — this is a new *entry point*, not a new backend.
 
 **W4.2 — Android share target**
@@ -366,7 +366,7 @@ You can measure everything that matters without ever storing a word, because the
 - **Vault revisit rate** — leading indicator of annual renewal.
 
 **Anti-metrics (rising = warning, not win):**
-- Average session frequency creeping up. Someone opening Unsent daily has a life problem the app should help *fix*, not farm.
+- Average session frequency creeping up. Someone opening Unsend daily has a life problem the app should help *fix*, not farm.
 - Any pressure to reveal real words for reach. That line never moves.
 
 All of these are ticks and categories. None require message content. The measurement respects the architecture.

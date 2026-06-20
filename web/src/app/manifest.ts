@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Unsent.",
-    short_name: "Unsent.",
+    name: "Unsend.",
+    short_name: "Unsend.",
     description: "For everything you almost said.",
     start_url: "/",
     scope: "/",

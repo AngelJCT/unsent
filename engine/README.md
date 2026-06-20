@@ -1,4 +1,4 @@
-# Unsent. — The Engine
+# Unsend. — The Engine
 
 The rewrite engine per the development plan (§3): one OpenRouter
 integration behind a stateless no-log proxy, one prompt that returns

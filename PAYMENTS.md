@@ -46,7 +46,7 @@ record, handles tax) via RevenueCat's _Stripe Billing_ integration.**
 Important: Managed Payments works ONLY through RevenueCat's Stripe Billing
 integration, NOT "Web Billing" — don't create a Web Billing config.
 
-1. **Stripe** — new account for Unsent; choose the option where **Stripe
+1. **Stripe** — new account for Unsend; choose the option where **Stripe
    handles tax/fraud/support** (Managed Payments / MoR).
 2. **RevenueCat** — connect Stripe via the **Stripe Billing** integration
    (project owner only). Create the entitlement `pro` (or set

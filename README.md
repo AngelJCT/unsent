@@ -1,10 +1,10 @@
-# Unsent.
+# Unsend.
 
 For everything you almost said. Catches the message you're about to
 regret, mirrors how it will actually read, offers the calmer version —
 then lets you send the better one or burn the original.
 
-Specs: [unsent-development-plan.md](unsent-development-plan.md) (the
+Specs: [unsend-development-plan.md](unsend-development-plan.md) (the
 build) · [brand-guidelines.md](brand-guidelines.md) (the voice).
 
 ## The no-log rule

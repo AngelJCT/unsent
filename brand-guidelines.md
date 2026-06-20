@@ -1,4 +1,4 @@
-# Unsent. — Brand Guidelines
+# Unsend. — Brand Guidelines
 
 **Version 1.0 — The book of almost.**
 
@@ -6,7 +6,7 @@
 
 ## 1. What This Is
 
-Unsent is a pressure valve disguised as an app. It catches the message
+Unsend is a pressure valve disguised as an app. It catches the message
 you're about to regret, shows you a calmer reflection of yourself, and
 lets you choose — send the better version, or burn the original and
 walk away.
@@ -21,11 +21,11 @@ into a place.
 
 ## 2. The Name
 
-- Always written **Unsent.** — capital U, with the period. The period
+- Always written **Unsend.** — capital U, with the period. The period
   is the product: a full stop where a send button used to be.
 - The period is set in **burn orange** in all brand lockups.
-- Never "UNSENT", never "unsent app", never pluralized, never verbed in
-  official copy ("I unsented it" belongs to users; let them have it).
+- Never "UNSEND", never "unsend app", never pluralized, never verbed in
+  official copy ("I unsent it" belongs to users; let them have it).
 
 ---
 
@@ -46,7 +46,7 @@ there's no one on the other side of the screen judging you.
 
 ## 4. Voice & Tone
 
-Unsent speaks like a wise friend at 2am — calm, dry, a little funny,
+Unsend speaks like a wise friend at 2am — calm, dry, a little funny,
 never clinical, never preachy.
 
 ### The Five Rules
