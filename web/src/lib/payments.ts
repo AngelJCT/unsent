@@ -45,6 +45,15 @@ function checkoutUrl(plan: EntitlementPlan): string | null {
   return urls[plan] ?? null;
 }
 
+// RevenueCat package identifiers (from the `default` offering) — appended
+// as ?package_id= so each plan deep-links straight to its checkout,
+// skipping RevenueCat's selection page. Set in code (not the env URL) to
+// avoid dotenv "$" variable-expansion issues with "$rc_*".
+const PACKAGE_IDS: Partial<Record<EntitlementPlan, string>> = {
+  monthly: "$rc_monthly",
+  yearly: "$rc_annual",
+};
+
 function canUseLocalCheckout(): boolean {
   if (typeof window === "undefined") return false;
   return ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -69,6 +78,8 @@ export async function startCheckout(
       target.pathname.replace(/\/+$/, "") +
       "/" +
       encodeURIComponent(getDeviceToken());
+    const pkg = PACKAGE_IDS[plan];
+    if (pkg) target.searchParams.set("package_id", pkg);
     window.location.assign(target.toString());
     return { ok: true, mode: "redirect" };
   }

@@ -27,8 +27,9 @@ signup — the first identity event a user ever has is the purchase itself
 - **Paywall UI**, three SKUs, plan selection, blur/unlock gating,
   on-pay tone regeneration — `Composer.tsx` + `payments.ts`.
 - **Outbound checkout** — `startCheckout(plan)` redirects to a per-plan
-  checkout URL with `?plan=…&device=<token>` so the processor can credit
-  the right RevenueCat app user id.
+  RevenueCat Web Purchase Link and appends the anonymous device token as
+  the final URL path segment. That path segment is the RevenueCat app
+  user id, so the processor can credit the right anonymous user.
 - **Entitlement read** — `web/src/lib/entitlement.ts` reads status from
   RevenueCat's REST subscriber endpoint (read-only; we don't use the Web
   SDK because purchases go through external Paddle/Stripe links). Gated
@@ -41,10 +42,10 @@ signup — the first identity event a user ever has is the purchase itself
 
 ## Your part (account setup)
 
-**Chosen path (2026-06-14): Stripe Managed Payments (Stripe = merchant of
-record, handles tax) via RevenueCat's _Stripe Billing_ integration.**
-Important: Managed Payments works ONLY through RevenueCat's Stripe Billing
-integration, NOT "Web Billing" — don't create a Web Billing config.
+**Chosen path (2026-06-14): Stripe Billing via RevenueCat, with "Use
+Managed Payments when available" enabled if Stripe supports it for the
+connected account/products.** Do this through RevenueCat's _Stripe
+Billing_ integration, NOT a RevenueCat Web Billing config.
 
 1. **Stripe** — new account for Unsend; choose the option where **Stripe
    handles tax/fraud/support** (Managed Payments / MoR).
@@ -59,10 +60,13 @@ integration, NOT "Web Billing" — don't create a Web Billing config.
 4. **Offering + packages** — one Package per product; attach all three to
    the `pro` entitlement.
 5. **Enable "Use Managed Payments when available."**
-6. **Web Purchase Links** — generate one per package; the app appends
-   `?app_user_id=<device token>` so the purchase attributes to that token
-   (which the REST read then recognizes). Set the success/return URL to
-   `…/?checkout=success`.
+6. **Web Purchase Links** — generate the link from Funnels → Purchase
+   Links and select the Stripe config + Offering. The app appends
+   `/<device token>` to the link, not `?app_user_id=...`. If you want the
+   app's Monthly / Yearly buttons to skip RevenueCat's package picker,
+   put the plan-specific `?package_id=...` on each env URL; the code
+   preserves that query string before appending the token. Set the
+   success/return URL to `…/?checkout=success`.
 7. **Redemption links** — RevenueCat appends `redeem_url` to the success
    page for cross-device restore (no login). Handling TBD in code.
 8. **Env vars** (`web/.env.local`):
@@ -73,8 +77,39 @@ integration, NOT "Web Billing" — don't create a Web Billing config.
    - `NEXT_PUBLIC_CHECKOUT_TONIGHT_URL`
    - `NEXT_PUBLIC_CHECKOUT_MONTHLY_URL`
    - `NEXT_PUBLIC_CHECKOUT_YEARLY_URL`
-7. **"Just Tonight" product type** — model as non-renewing / consumable
+9. **"Just Tonight" product type** — model as non-renewing / consumable
    so it can't read as a sneaky auto-renew (matters at native review).
+
+## Sandbox testing checklist
+
+RevenueCat's Sandbox Web Purchase Link does **not** convert a live Stripe
+configuration into test mode. Stripe Sandboxes are standalone accounts, so
+testing needs a dedicated sandbox-side setup:
+
+1. In Stripe, switch to the Sandbox account you want to test.
+2. Install the RevenueCat Stripe app in that Stripe Sandbox.
+3. In RevenueCat, create a separate Stripe web config that selects that
+   sandbox Stripe account.
+4. Create/import the sandbox Stripe products and prices into RevenueCat.
+   Keep one price per product to avoid ambiguous checkout behavior.
+5. Create the Offering/packages from those sandbox-imported products and
+   attach the `pro` entitlement.
+6. Create/publish the Web Purchase Link using the sandbox Stripe config
+   and that Offering.
+7. Copy the **Sandbox** purchase-link URLs into Vercel while testing.
+   When going live, swap the env vars to the Production purchase-link
+   URLs backed by the live Stripe config.
+
+Do not mix environments. A sandbox Web Purchase Link should use a
+sandbox Stripe config, an Offering built from sandbox-imported Stripe
+products, and sandbox purchase-link URLs. Products imported from live
+Stripe mode belong to the production Stripe config and should only back
+production purchase links.
+
+If the RevenueCat hosted paywall loads but clicking a package shows
+"Purchase not started" before Stripe checkout appears, first check that
+the link, Offering, package products, and Stripe config are all from the
+same environment: all sandbox for testing, or all production for live.
 
 ## Still unverified until you connect it
 
