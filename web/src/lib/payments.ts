@@ -14,14 +14,11 @@ export type Sku = {
   featured?: boolean;
 };
 
+// "Just Tonight" ($2.99 24h pass) is held for the native phase — a
+// one-time pass models cleanly on StoreKit/Play Billing but becomes a
+// "pay once, Pro forever" bug on Stripe web (one-time price → lifetime
+// entitlement). Web ships Monthly + Yearly only.
 export const SKUS: Sku[] = [
-  {
-    id: "tonight",
-    label: "Just Tonight",
-    price: "$2.99",
-    detail: "24 hours, no renewal",
-    button: "Get me through tonight",
-  },
   {
     id: "monthly",
     label: "Monthly",
@@ -62,11 +59,16 @@ export async function startCheckout(
 > {
   const url = checkoutUrl(plan);
   if (url) {
+    // RevenueCat Web Purchase Links take the app_user_id as a PATH segment
+    // (…/<link>/<app_user_id>), NOT a query param — a query param renders
+    // RevenueCat's client-side 404. Our anonymous device token is that id,
+    // so the REST status check recognizes the purchase on return (no
+    // account needed). Any existing query (e.g. ?package_id=) is preserved.
     const target = new URL(url, window.location.href);
-    // RevenueCat Web Purchase Links attribute the sale to this app_user_id
-    // — our anonymous device token. The REST status check uses the same
-    // token, so the purchase is recognized on return (no account needed).
-    target.searchParams.set("app_user_id", getDeviceToken());
+    target.pathname =
+      target.pathname.replace(/\/+$/, "") +
+      "/" +
+      encodeURIComponent(getDeviceToken());
     window.location.assign(target.toString());
     return { ok: true, mode: "redirect" };
   }
