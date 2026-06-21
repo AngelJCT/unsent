@@ -34,20 +34,52 @@ export function isRemoteEntitlementEnabled(): boolean {
   return Boolean(RC_KEY);
 }
 
-/** Map a RevenueCat product identifier to one of our plans (best-effort). */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Infer the plan from one billing period's length. This is the robust
+ * signal: it works regardless of how opaque the store's product id is
+ * (Stripe ids like `prod_Uhq6…` carry no "month"/"year" keyword). Use the
+ * *subscription's* dates (current period) so renewals don't drift the math.
+ */
+function planFromPeriod(
+  startISO?: string | null,
+  endISO?: string | null,
+): EntitlementPlan | null {
+  if (!startISO || !endISO) return null;
+  const days = (Date.parse(endISO) - Date.parse(startISO)) / DAY_MS;
+  if (!Number.isFinite(days) || days <= 0) return null;
+  if (days <= 2) return "tonight";
+  if (days <= 10) return "weekly";
+  if (days <= 45) return "monthly";
+  return "yearly";
+}
+
+/**
+ * Fallback when no period is available: map a product identifier by
+ * keyword. Defaults to monthly (the common case) rather than yearly so an
+ * unrecognized id never silently overstates the plan.
+ */
 function planFromProduct(productId: unknown): EntitlementPlan {
   const id = typeof productId === "string" ? productId.toLowerCase() : "";
   if (id.includes("tonight") || id.includes("day") || id.includes("24")) {
     return "tonight";
   }
   if (id.includes("week")) return "weekly";
+  if (id.includes("year") || id.includes("annual")) return "yearly";
   if (id.includes("month")) return "monthly";
-  return "yearly";
+  return "monthly";
 }
 
 type RcEntitlement = {
   expires_date?: string | null;
+  purchase_date?: string | null;
   product_identifier?: string;
+};
+
+type RcSubscription = {
+  purchase_date?: string | null;
+  expires_date?: string | null;
 };
 
 /**
@@ -74,9 +106,18 @@ export async function syncEntitlement(): Promise<EntitlementState> {
       (!ent.expires_date || Date.parse(ent.expires_date) > Date.now());
 
     if (active && ent) {
+      // Prefer the current subscription period (renewal-safe), then the
+      // entitlement's own dates, then a keyword guess from the product id.
+      const sub = data?.subscriber?.subscriptions?.[
+        ent.product_identifier ?? ""
+      ] as RcSubscription | undefined;
+      const plan =
+        planFromPeriod(sub?.purchase_date, sub?.expires_date) ??
+        planFromPeriod(ent.purchase_date, ent.expires_date) ??
+        planFromProduct(ent.product_identifier);
       const state: EntitlementState = {
         active: true,
-        plan: planFromProduct(ent.product_identifier),
+        plan,
         expiresAt: ent.expires_date ?? null,
         source: "revenuecat",
       };
