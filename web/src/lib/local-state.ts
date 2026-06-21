@@ -22,7 +22,7 @@ export type FunnelEvent =
   | "receipt_opened"
   | "receipt_shared"
   | "receipt_saved";
-export type EntitlementPlan = "tonight" | "monthly" | "yearly";
+export type EntitlementPlan = "tonight" | "weekly" | "monthly" | "yearly";
 export type EntitlementSource =
   | "local_phase2"
   | "checkout"
@@ -131,6 +131,7 @@ export function recordFunnelEvent(event: FunnelEvent) {
 
 function planDurationMs(plan: EntitlementPlan): number {
   if (plan === "tonight") return 24 * 60 * 60 * 1000;
+  if (plan === "weekly") return 7 * 24 * 60 * 60 * 1000;
   if (plan === "monthly") return 31 * 24 * 60 * 60 * 1000;
   return 366 * 24 * 60 * 60 * 1000;
 }
@@ -151,6 +152,7 @@ export function getEntitlement(): EntitlementState {
     const parsed = JSON.parse(raw) as Partial<EntitlementState>;
     const plan =
       parsed.plan === "tonight" ||
+      parsed.plan === "weekly" ||
       parsed.plan === "monthly" ||
       parsed.plan === "yearly"
         ? parsed.plan

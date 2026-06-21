@@ -11,17 +11,21 @@ import {
   Copy,
   Crown,
   Download,
+  ExternalLink,
   Eye,
   Flame,
   Heart,
   Home,
   Lock,
   MessageCircle,
+  Moon,
   Receipt,
   RotateCcw,
+  Settings,
   ShieldCheck,
   Share2,
   Sparkles,
+  TrendingUp,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -39,10 +43,17 @@ import {
   resolveCrisisRegion,
 } from "@/lib/crisis-resources";
 import {
+  fetchManagementUrl,
   isRemoteEntitlementEnabled,
   restoreEntitlement,
   syncEntitlement,
 } from "@/lib/entitlement";
+import {
+  getRecipientMemory,
+  rememberLastGoal,
+  setRecipientNote,
+} from "@/lib/recipient-memory";
+import { computeVaultInsights, type VaultInsights } from "@/lib/vault-insights";
 import {
   getEntitlement,
   getReadCount,
@@ -124,7 +135,8 @@ type Stage =
   | "burning"
   | "released"
   | "receipt"
-  | "vault";
+  | "vault"
+  | "settings";
 
 type SentOutcome = "calmer" | "nothing" | "original";
 
@@ -166,11 +178,13 @@ function AppHeader({
   onBack,
   onReset,
   onVault,
+  onSettings,
 }: {
   canGoBack: boolean;
   onBack: () => void;
   onReset: () => void;
   onVault: () => void;
+  onSettings: () => void;
 }) {
   return (
     <header className="flex items-center justify-between gap-4 py-6">
@@ -196,6 +210,15 @@ function AppHeader({
           className="text-ash transition-colors hover:text-ash-deep"
         >
           <Archive size={20} strokeWidth={1.5} />
+        </button>
+        <button
+          type="button"
+          onClick={onSettings}
+          aria-label="Settings and subscription"
+          title="Settings"
+          className="text-ash transition-colors hover:text-ash-deep"
+        >
+          <Settings size={20} strokeWidth={1.5} />
         </button>
       </div>
     </header>
@@ -585,10 +608,13 @@ function ComposeScreen({
   goal,
   error,
   ready,
+  isPro,
+  recipientNote,
   onDraft,
   onCategory,
   onCustomRecipient,
   onGoal,
+  onRecipientNote,
   onSubmit,
   onSample,
 }: {
@@ -599,13 +625,20 @@ function ComposeScreen({
   goal: string | null;
   error: EngineError | null;
   ready: boolean;
+  isPro: boolean;
+  recipientNote: string;
   onDraft: (value: string) => void;
   onCategory: (value: CategoryId | null) => void;
   onCustomRecipient: (value: string) => void;
   onGoal: (value: string | null) => void;
+  onRecipientNote: (value: string) => void;
   onSubmit: () => void;
   onSample: () => void;
 }) {
+  const recipientLabel =
+    category === "other" && customRecipient.trim()
+      ? customRecipient.trim()
+      : categoryLabel(category);
   return (
     <motion.section key="compose" {...motionPreset} className="flex flex-1 flex-col pb-8">
       <div className="mt-7">
@@ -633,6 +666,31 @@ function ComposeScreen({
         onCustomRecipient={onCustomRecipient}
       />
       <GoalPicker category={category} value={goal} onChange={onGoal} />
+
+      {isPro && category && (
+        <div className="mt-5">
+          <label
+            htmlFor="recipient-note"
+            className="flex items-center gap-1.5 font-receipt text-xs uppercase tracking-[0.18em] text-ash"
+          >
+            <Sparkles size={13} strokeWidth={1.5} />
+            Remember about {recipientLabel}
+          </label>
+          <input
+            id="recipient-note"
+            type="text"
+            value={recipientNote}
+            maxLength={120}
+            onChange={(event) => onRecipientNote(event.target.value)}
+            placeholder="e.g. we co-parent; keep it civil"
+            className="mt-2 w-full rounded-2xl border border-paper-border bg-paper px-4 py-3 text-sm text-ink placeholder:text-ash focus:border-ash focus:outline-none"
+          />
+          <p className="mt-1.5 font-receipt text-[11px] leading-relaxed text-ash">
+            Stays on this device. Helps the mirror read your situation more
+            precisely each time.
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 min-h-24">
         <AnimatePresence>
@@ -1408,20 +1466,158 @@ function formatVaultDate(value: string) {
   }).format(date);
 }
 
+// The compounding part of the Vault (Pro): what your almost-sends reveal,
+// computed on-device from metadata only. Non-Pro sees the locked teaser.
+function VaultInsightsPanel({
+  insights,
+  isPro,
+  onUnlock,
+}: {
+  insights: VaultInsights;
+  isPro: boolean;
+  onUnlock: () => void;
+}) {
+  if (!isPro) {
+    return (
+      <button
+        type="button"
+        onClick={onUnlock}
+        className="mt-6 w-full rounded-2xl border border-paper-border bg-paper p-4 text-left transition-colors hover:border-ash"
+      >
+        <span className="flex items-center gap-2 font-receipt text-xs uppercase tracking-[0.18em] text-ash">
+          <Lock size={13} strokeWidth={1.5} />
+          Your patterns
+        </span>
+        <span className="mt-2 block font-brand text-lg italic leading-snug text-ink">
+          What your almost-sends reveal — the longer you keep them, the more it
+          shows.
+        </span>
+        <span className="mt-2 block text-sm text-ash-deep">
+          Part of Pro. Read on this device only.
+        </span>
+      </button>
+    );
+  }
+
+  if (!insights.enough) {
+    return (
+      <div className="mt-6 rounded-2xl border border-paper-border bg-paper p-4">
+        <p className="flex items-center gap-2 font-receipt text-xs uppercase tracking-[0.18em] text-ash">
+          <TrendingUp size={13} strokeWidth={1.5} />
+          Your patterns
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-ash-deep">
+          They&apos;ll appear here as your Vault grows. A few more, and the shape
+          starts to show.
+        </p>
+      </div>
+    );
+  }
+
+  const rows: Array<{ icon: LucideIcon; text: React.ReactNode }> = [];
+  rows.push({
+    icon: Eye,
+    text: (
+      <>
+        You&apos;ve caught{" "}
+        <span className="font-medium text-ink">{insights.total}</span> drafts
+        before sending — and let go of{" "}
+        <span className="font-medium text-ink">{insights.restraintPct}%</span> of
+        them.
+      </>
+    ),
+  });
+  if (insights.hardest && insights.hardest.count >= 2) {
+    rows.push({
+      icon: Heart,
+      text: (
+        <>
+          Your hardest recipient is{" "}
+          <span className="font-medium text-ink">
+            {categoryLabel(insights.hardest.category)}
+          </span>
+          .
+        </>
+      ),
+    });
+  }
+  if (insights.when) {
+    rows.push({
+      icon: Moon,
+      text: (
+        <>
+          You almost-send most{" "}
+          <span className="font-medium text-ink">{insights.when}</span>.
+        </>
+      ),
+    });
+  }
+  if (insights.resurfaced) {
+    rows.push({
+      icon: Clock,
+      text: (
+        <>
+          A while back —{" "}
+          <span className="font-medium text-ink">
+            {formatVaultDate(insights.resurfaced.createdAt)}
+          </span>{" "}
+          — you almost messaged{" "}
+          <span className="font-medium text-ink">
+            {categoryLabel(insights.resurfaced.recipientCategory)}
+          </span>
+          . You didn&apos;t.
+        </>
+      ),
+    });
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl border border-paper-border bg-paper p-4">
+      <p className="flex items-center gap-2 font-receipt text-xs uppercase tracking-[0.18em] text-ash">
+        <TrendingUp size={13} strokeWidth={1.5} />
+        Your patterns
+      </p>
+      <ul className="mt-3 flex flex-col gap-3">
+        {rows.map((row, index) => {
+          const Icon = row.icon;
+          return (
+            <li key={index} className="flex items-start gap-3">
+              <Icon
+                size={16}
+                strokeWidth={1.5}
+                className="mt-0.5 shrink-0 text-ash"
+              />
+              <span className="text-sm leading-relaxed text-ash-deep">
+                {row.text}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function VaultScreen({
   motionPreset,
   entries,
   summary,
+  insights,
+  isPro,
   note,
   loading,
   onReset,
+  onUnlock,
 }: {
   motionPreset: MotionPreset;
   entries: VaultEntry[];
   summary: VaultSummary | null;
+  insights: VaultInsights;
+  isPro: boolean;
   note: string | null;
   loading: boolean;
   onReset: () => void;
+  onUnlock: () => void;
 }) {
   const stats = [
     ["UNSENT", String(summary?.unsent ?? 0)],
@@ -1453,6 +1649,14 @@ function VaultScreen({
           </div>
         ))}
       </div>
+
+      {!loading && (
+        <VaultInsightsPanel
+          insights={insights}
+          isPro={isPro}
+          onUnlock={onUnlock}
+        />
+      )}
 
       <div className="mt-5">
         <PrivacyLine>
@@ -1787,6 +1991,155 @@ async function buildReceiptBlob(
   });
 }
 
+function planLabelFor(plan: EntitlementPlan | null): string {
+  return SKUS.find((sku) => sku.id === plan)?.label ?? "Pro";
+}
+
+// Settings + subscription. With no accounts, the device token IS the
+// identity, so this is the only place to view/manage a pass: upgrade
+// (the paywall, when free), restore, or open the processor-hosted
+// manage/cancel page (RevenueCat's management_url).
+function SettingsScreen({
+  motionPreset,
+  entitlement,
+  checkoutNote,
+  onChoosePlan,
+  onRestore,
+  onManage,
+}: {
+  motionPreset: MotionPreset;
+  entitlement: EntitlementState;
+  checkoutNote: string | null;
+  onChoosePlan: (plan: EntitlementPlan) => void;
+  onRestore: () => void;
+  onManage: () => Promise<string | null>;
+}) {
+  const [managing, setManaging] = useState(false);
+  const [manageNote, setManageNote] = useState<string | null>(null);
+  const expiry = formatExpiry(entitlement);
+
+  async function handleManage() {
+    setManaging(true);
+    setManageNote(null);
+    const url = await onManage();
+    setManaging(false);
+    if (url) {
+      window.location.assign(url);
+      return;
+    }
+    setManageNote(
+      "We couldn't open the billing page on this device. To cancel, reply to your receipt email or write to acarrion5991@gmail.com.",
+    );
+  }
+
+  return (
+    <motion.section
+      key="settings"
+      {...motionPreset}
+      className="flex flex-1 flex-col pb-8"
+    >
+      <div className="mt-5">
+        <p className="font-receipt text-xs uppercase tracking-[0.22em] text-ash">
+          Settings
+        </p>
+        <h1 className="mt-3 font-brand text-4xl italic tracking-tight">
+          {entitlement.active ? "Your subscription." : "Unsend Pro."}
+        </h1>
+      </div>
+
+      {entitlement.active ? (
+        <>
+          <div className="mt-6 rounded-2xl border border-paper-border bg-paper p-4">
+            <div className="flex items-start gap-3">
+              <Crown
+                size={20}
+                strokeWidth={1.5}
+                className="mt-0.5 shrink-0 text-burn"
+              />
+              <div>
+                <p className="font-medium text-ink">
+                  {planLabelFor(entitlement.plan)} — active
+                </p>
+                {expiry && (
+                  <p className="mt-1 text-sm leading-relaxed text-ash-deep">
+                    Renews on this device until {expiry}.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleManage}
+              disabled={managing}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-4 text-base font-medium text-canvas transition-colors hover:bg-ash-deep disabled:opacity-60"
+            >
+              <ExternalLink size={16} strokeWidth={1.5} />
+              {managing ? "Opening…" : "Manage or cancel"}
+            </button>
+            <button
+              type="button"
+              onClick={onRestore}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-paper-border bg-paper px-5 py-4 text-sm text-ash-deep transition-colors hover:border-ash hover:text-ink"
+            >
+              <RotateCcw size={15} strokeWidth={1.5} />
+              Restore on this device
+            </button>
+          </div>
+
+          {manageNote && (
+            <p className="mt-4 rounded-2xl border border-ember bg-paper px-4 py-3 text-sm leading-relaxed text-ash-deep">
+              {manageNote}
+            </p>
+          )}
+          {checkoutNote && (
+            <p className="mt-4 text-sm leading-relaxed text-ash-deep">
+              {checkoutNote}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="mt-4 text-sm leading-relaxed text-ash-deep">
+            You&apos;re on the free read. Pro adds every tone, your remembered
+            context, and the patterns in your Vault.
+          </p>
+          <PaywallPanel
+            entitlement={entitlement}
+            checkoutNote={checkoutNote}
+            onChoose={onChoosePlan}
+            onRestore={onRestore}
+          />
+        </>
+      )}
+
+      <div className="mt-6">
+        <PrivacyLine>
+          No accounts. This device is your only identity — nothing here is tied
+          to your name.
+        </PrivacyLine>
+      </div>
+
+      <div className="mt-6 flex items-center gap-4 font-receipt text-xs uppercase tracking-wider text-ash">
+        <a
+          href="/terms"
+          className="underline underline-offset-4 transition-colors hover:text-ash-deep"
+        >
+          Terms
+        </a>
+        <a
+          href="/privacy"
+          className="underline underline-offset-4 transition-colors hover:text-ash-deep"
+        >
+          Privacy
+        </a>
+      </div>
+    </motion.section>
+  );
+}
+
 export default function Composer() {
   // Start at "boot": localStorage (tier) can't be read during SSR, so the
   // real entry stage is chosen in an effect after mount.
@@ -1812,10 +2165,17 @@ export default function Composer() {
   const [vaultSummary, setVaultSummary] = useState<VaultSummary | null>(null);
   const [vaultLoading, setVaultLoading] = useState(false);
   const [vaultNote, setVaultNote] = useState<string | null>(null);
+  // Recipient memory (Pro): an editable on-device note about who this is.
+  const [recipientNote, setRecipientNoteState] = useState("");
   const [devHost, setDevHost] = useState(false);
   const reduceMotion = useReducedMotion();
 
+  const isPro = entitlement.active;
   const stats = useMemo(() => computeDraftStats(draft), [draft]);
+  const vaultInsights = useMemo(
+    () => computeVaultInsights(vaultEntries),
+    [vaultEntries],
+  );
   const ready = stats.words >= composer.ctaWordThreshold;
   const motionPreset: MotionPreset = {
     initial: reduceMotion ? { opacity: 0 } : { opacity: 0, y: timing.revealRisePx },
@@ -1859,6 +2219,21 @@ export default function Composer() {
       return customRecipient.trim();
     }
     return categoryLabel(category);
+  }
+
+  // Picking a recipient loads its remembered context: the saved note and
+  // the last goal chosen for them (recipient memory — on-device).
+  function pickCategory(next: CategoryId | null) {
+    setCategory(next);
+    const memory = getRecipientMemory(next);
+    setRecipientNoteState(memory.note ?? "");
+    setGoal(memory.lastGoal ?? null);
+  }
+
+  // Choosing a goal remembers it for next time (per recipient).
+  function pickGoal(next: string | null) {
+    setGoal(next);
+    rememberLastGoal(category, next);
   }
 
   useEffect(() => {
@@ -1915,6 +2290,7 @@ export default function Composer() {
     setUnlocking(false);
     setCheckoutNote(null);
     setVaultNote(null);
+    setRecipientNoteState("");
   }
 
   function startSample() {
@@ -1924,6 +2300,7 @@ export default function Composer() {
     setCategory("ex");
     setCustomRecipient("");
     setGoal(null);
+    setRecipientNoteState(getRecipientMemory("ex").note ?? "");
     setResult(null);
     setError(null);
     setCopiedKey(null);
@@ -1973,6 +2350,11 @@ export default function Composer() {
     };
     setResultTier(tier);
 
+    // Persist the recipient note (Pro) so it's remembered next time, and
+    // feed it as context for this call only when the user is entitled.
+    if (paid) setRecipientNote(category, recipientNote);
+    const context = paid ? recipientNote.trim() || null : null;
+
     setStage("reading");
     const started = Date.now();
     const res = await requestRewrite({
@@ -1980,6 +2362,7 @@ export default function Composer() {
       recipient: recipientForEngine(),
       feeling: null,
       goal,
+      context,
       want,
     });
     const hold = Math.max(0, MIN_CEREMONY_MS - (Date.now() - started));
@@ -2032,6 +2415,7 @@ export default function Composer() {
       recipient: recipientForEngine(),
       feeling: null,
       goal,
+      context: recipientNote.trim() || null,
       want: { rewrite: needRewrite, tones: needTones },
     });
     setUnlocking(false);
@@ -2098,11 +2482,17 @@ export default function Composer() {
     setStage("vault");
   }
 
+  function openSettings() {
+    setCheckoutNote(null);
+    setStage("settings");
+  }
+
   async function keepInVault() {
     const saved = await saveVaultEntry({
       draft,
       recipientCategory: category,
       status: "kept",
+      goal,
     }).catch(() => null);
     if (!saved) {
       openVault("The Vault could not open in this browser.");
@@ -2128,6 +2518,7 @@ export default function Composer() {
     void saveVaultEntry({
       recipientCategory: category,
       status: "burned",
+      goal,
     }).catch(() => null);
     sendCounterTick("burned", category);
     setStage("burning");
@@ -2147,7 +2538,7 @@ export default function Composer() {
       setStage("recipient");
       return;
     }
-    if (stage === "vault") {
+    if (stage === "vault" || stage === "settings") {
       setStage(result && !result.crisis ? "result" : entryStage());
       return;
     }
@@ -2161,6 +2552,7 @@ export default function Composer() {
         onBack={goBack}
         onReset={resetFlow}
         onVault={() => openVault()}
+        onSettings={openSettings}
       />
 
       <main className="flex flex-1 flex-col">
@@ -2179,8 +2571,7 @@ export default function Composer() {
               value={category}
               customRecipient={customRecipient}
               onPick={(c) => {
-                setCategory(c);
-                setGoal(null);
+                pickCategory(c);
                 // "Other" stays so they can type who it is; the rest advance.
                 if (c !== "other") setStage("goal");
               }}
@@ -2195,11 +2586,11 @@ export default function Composer() {
               category={category}
               value={goal}
               onPick={(g) => {
-                setGoal(g);
+                pickGoal(g);
                 setStage("compose");
               }}
               onSkip={() => {
-                setGoal(null);
+                pickGoal(null);
                 setStage("compose");
               }}
             />
@@ -2214,13 +2605,16 @@ export default function Composer() {
               goal={goal}
               error={error}
               ready={ready}
+              isPro={isPro}
+              recipientNote={recipientNote}
               onDraft={(value) => {
                 setDraft(value);
                 setIsSample(false);
               }}
-              onCategory={setCategory}
+              onCategory={pickCategory}
               onCustomRecipient={setCustomRecipient}
-              onGoal={setGoal}
+              onGoal={pickGoal}
+              onRecipientNote={setRecipientNoteState}
               onSubmit={showMirror}
               onSample={startSample}
             />
@@ -2314,9 +2708,23 @@ export default function Composer() {
               motionPreset={motionPreset}
               entries={vaultEntries}
               summary={vaultSummary}
+              insights={vaultInsights}
+              isPro={isPro}
               note={vaultNote}
               loading={vaultLoading}
               onReset={resetFlow}
+              onUnlock={openSettings}
+            />
+          )}
+
+          {stage === "settings" && (
+            <SettingsScreen
+              motionPreset={motionPreset}
+              entitlement={entitlement}
+              checkoutNote={checkoutNote}
+              onChoosePlan={choosePlan}
+              onRestore={restorePurchase}
+              onManage={fetchManagementUrl}
             />
           )}
         </AnimatePresence>

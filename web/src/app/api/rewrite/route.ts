@@ -202,6 +202,7 @@ export async function POST(req: NextRequest) {
     recipient?: unknown;
     feeling?: unknown;
     goal?: unknown;
+    context?: unknown;
     want?: unknown;
   };
   try {
@@ -238,6 +239,13 @@ export async function POST(req: NextRequest) {
     typeof body.goal === "string" && body.goal.trim() && body.goal.length <= 60
       ? body.goal.trim()
       : null;
+  // context is the user's optional on-device recipient note (Pro). Bounded
+  // free text; like everything else in the user message it's data, never an
+  // instruction, and it's never logged here.
+  const context =
+    typeof body.context === "string" && body.context.trim()
+      ? body.context.trim().replace(/\s+/g, " ").slice(0, 120)
+      : null;
 
   // What the caller may receive. Defaults to the full set so a plain
   // request still behaves; the client narrows it per entitlement tier.
@@ -251,7 +259,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "engine_unavailable" }, { status: 503 });
   }
 
-  const userPayload = JSON.stringify({ draft, recipient, feeling, goal });
+  const userPayload = JSON.stringify({ draft, recipient, feeling, goal, context });
   // Budget scales with what's requested: mirror (~200 tok) + each
   // version ≤ draft length (chars/4 ≈ tokens, ×~2 headroom).
   const versions = 1 + (want.rewrite ? 1 : 0) + (want.tones ? 3 : 0);

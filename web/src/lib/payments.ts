@@ -20,16 +20,23 @@ export type Sku = {
 // entitlement). Web ships Monthly + Yearly only.
 export const SKUS: Sku[] = [
   {
+    id: "weekly",
+    label: "Weekly",
+    price: "$4.99",
+    detail: "When it's a hard week",
+    button: "Cover this week",
+  },
+  {
     id: "monthly",
     label: "Monthly",
-    price: "$6.99",
+    price: "$9.99",
     detail: "For the repeat almost-sends",
     button: "Stay covered monthly",
   },
   {
     id: "yearly",
     label: "Yearly",
-    price: "$34.99",
+    price: "$49.99",
     detail: "Most chosen",
     button: "Keep the calmer year",
     featured: true,
@@ -39,6 +46,7 @@ export const SKUS: Sku[] = [
 function checkoutUrl(plan: EntitlementPlan): string | null {
   const urls: Record<EntitlementPlan, string | undefined> = {
     tonight: process.env.NEXT_PUBLIC_CHECKOUT_TONIGHT_URL,
+    weekly: process.env.NEXT_PUBLIC_CHECKOUT_WEEKLY_URL,
     monthly: process.env.NEXT_PUBLIC_CHECKOUT_MONTHLY_URL,
     yearly: process.env.NEXT_PUBLIC_CHECKOUT_YEARLY_URL,
   };
@@ -50,6 +58,7 @@ function checkoutUrl(plan: EntitlementPlan): string | null {
 // skipping RevenueCat's selection page. Set in code (not the env URL) to
 // avoid dotenv "$" variable-expansion issues with "$rc_*".
 const PACKAGE_IDS: Partial<Record<EntitlementPlan, string>> = {
+  weekly: "$rc_weekly",
   monthly: "$rc_monthly",
   yearly: "$rc_annual",
 };

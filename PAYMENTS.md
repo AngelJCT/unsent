@@ -22,10 +22,32 @@ signup — the first identity event a user ever has is the purchase itself
   lookup we have to build. ("Restore purchase" in-app re-checks the
   current device and tells the user to use the receipt link otherwise.)
 
+## Web SKUs & prices (current)
+
+Web ships three plans (the `Just Tonight` one-off is held for native —
+see the note in `payments.ts`):
+
+| Plan | Price | RevenueCat package id | env URL |
+|---|---|---|---|
+| Weekly | $4.99 | `$rc_weekly` | `NEXT_PUBLIC_CHECKOUT_WEEKLY_URL` |
+| Monthly | $9.99 | `$rc_monthly` | `NEXT_PUBLIC_CHECKOUT_MONTHLY_URL` |
+| Yearly (featured) | $49.99 | `$rc_annual` | `NEXT_PUBLIC_CHECKOUT_YEARLY_URL` |
+
+The price strings in `payments.ts` are **labels only** — the real
+charge is the Stripe price each package points to. Keep them in sync.
+Create the Weekly product/price + `$rc_weekly` package in
+Stripe/RevenueCat and attach it to the `pro` entitlement.
+
 ## What's implemented (code, done)
 
-- **Paywall UI**, three SKUs, plan selection, blur/unlock gating,
-  on-pay tone regeneration — `Composer.tsx` + `payments.ts`.
+- **Paywall UI**, three SKUs (weekly/monthly/yearly), plan selection,
+  blur/unlock gating, on-pay tone regeneration — `Composer.tsx` +
+  `payments.ts`.
+- **Settings + manage/cancel** — the header gear opens a Settings screen:
+  status, Upgrade (the paywall when free), Restore, and **Manage or
+  cancel** via RevenueCat's `subscriber.management_url`
+  (`fetchManagementUrl()` in `entitlement.ts`); graceful fallback when
+  no URL/key.
 - **Outbound checkout** — `startCheckout(plan)` redirects to a per-plan
   RevenueCat Web Purchase Link and appends the anonymous device token as
   the final URL path segment. That path segment is the RevenueCat app

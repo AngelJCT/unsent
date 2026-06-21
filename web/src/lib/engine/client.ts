@@ -25,6 +25,9 @@ export async function requestRewrite(input: {
   recipient?: string | null;
   feeling?: string | null;
   goal?: string | null;
+  // Optional on-device recipient note (Pro). Bounded + treated as data
+  // server-side; the proxy never logs it. See recipient-memory.ts.
+  context?: string | null;
   want?: EngineWant;
 }): Promise<
   { ok: true; result: EngineResult } | { ok: false; error: EngineError }

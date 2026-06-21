@@ -13,6 +13,9 @@ export type VaultEntry = {
   createdAt: string;
   status: VaultStatus;
   snippet?: string;
+  // The goal chosen for this draft, when one was. Metadata only — feeds
+  // the on-device Vault insights; never a message-text field.
+  goal?: string;
 };
 
 export type VaultSummary = {
@@ -170,6 +173,7 @@ export async function saveVaultEntry(input: {
   draft?: string;
   recipientCategory: CategoryId | null;
   status: VaultStatus;
+  goal?: string | null;
 }): Promise<VaultEntry | null> {
   if (!supportsVault()) return null;
 
@@ -181,6 +185,7 @@ export async function saveVaultEntry(input: {
       recipientCategory: input.recipientCategory ?? "other",
       createdAt: new Date().toISOString(),
       status: input.status,
+      ...(input.goal ? { goal: input.goal } : {}),
       ...(input.status === "kept" && input.draft
         ? { snippet: makeSnippet(input.draft) }
         : {}),

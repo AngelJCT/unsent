@@ -40,6 +40,7 @@ function planFromProduct(productId: unknown): EntitlementPlan {
   if (id.includes("tonight") || id.includes("day") || id.includes("24")) {
     return "tonight";
   }
+  if (id.includes("week")) return "weekly";
   if (id.includes("month")) return "monthly";
   return "yearly";
 }
@@ -97,4 +98,28 @@ export async function syncEntitlement(): Promise<EntitlementState> {
  */
 export async function restoreEntitlement(): Promise<EntitlementState> {
   return syncEntitlement();
+}
+
+/**
+ * The processor-hosted "manage / cancel" page for this device's
+ * subscription, surfaced by RevenueCat as `subscriber.management_url`
+ * (e.g. the Stripe billing portal). This is how a no-account user cancels.
+ * Returns null in local mode (no key) or when the processor doesn't
+ * expose one — the Settings screen then shows a graceful fallback.
+ */
+export async function fetchManagementUrl(): Promise<string | null> {
+  if (!RC_KEY) return null;
+  try {
+    const token = getDeviceToken();
+    const res = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(token)}`,
+      { headers: { Authorization: `Bearer ${RC_KEY}` } },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const url = data?.subscriber?.management_url;
+    return typeof url === "string" && url ? url : null;
+  } catch {
+    return null;
+  }
 }
