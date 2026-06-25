@@ -2,7 +2,7 @@
  * Client side of the engine call (plan W1.4). The draft lives in React
  * state and this one request — never in storage, never in logs.
  */
-import { getDeviceToken } from "@/lib/local-state";
+import { getDeviceToken, getEntitlement } from "@/lib/local-state";
 
 export type EngineTones = { warm: string; final: string; unbothered: string };
 // Parts are optional: the server only returns what the caller is entitled
@@ -33,12 +33,19 @@ export async function requestRewrite(input: {
   { ok: true; result: EngineResult } | { ok: false; error: EngineError }
 > {
   try {
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "x-device-token": getDeviceToken(),
+    };
+    if (
+      ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+      getEntitlement().active
+    ) {
+      headers["x-unsent-dev-entitlement"] = "local";
+    }
     const res = await fetch("/api/rewrite", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-device-token": getDeviceToken(),
-      },
+      headers,
       body: JSON.stringify(input),
     });
     if (!res.ok) {

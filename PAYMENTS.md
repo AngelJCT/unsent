@@ -74,21 +74,19 @@ Billing_ integration, NOT a RevenueCat Web Billing config.
 2. **RevenueCat** — connect Stripe via the **Stripe Billing** integration
    (project owner only). Create the entitlement `pro` (or set
    `NEXT_PUBLIC_REVENUECAT_ENTITLEMENT`).
-3. **Products** — create the three in **Stripe Billing**: tonight /
-   monthly / yearly. Name the product id with `tonight`/`month`/`year`
-   (the app maps product → plan by that substring; else defaults to
-   yearly — adjust `planFromProduct` in `entitlement.ts` if you name them
-   differently).
+3. **Products** — create the three web products in **Stripe Billing**:
+   weekly / monthly / yearly. RevenueCat's entitlement period is the
+   primary signal the app uses to label the active plan; product-id
+   keywords are only a fallback.
 4. **Offering + packages** — one Package per product; attach all three to
    the `pro` entitlement.
 5. **Enable "Use Managed Payments when available."**
 6. **Web Purchase Links** — generate the link from Funnels → Purchase
    Links and select the Stripe config + Offering. The app appends
-   `/<device token>` to the link, not `?app_user_id=...`. If you want the
-   app's Monthly / Yearly buttons to skip RevenueCat's package picker,
-   put the plan-specific `?package_id=...` on each env URL; the code
-   preserves that query string before appending the token. Set the
-   success/return URL to `…/?checkout=success`.
+   `/<device token>` to the link, not `?app_user_id=...`. The app also
+   appends the correct RevenueCat `package_id` for Weekly / Monthly /
+   Yearly so each button deep-links to its package. Set the success/return
+   URL to `…/?checkout=success`.
 7. **Redemption links** — RevenueCat appends `redeem_url` to the success
    page for cross-device restore (no login). Handling TBD in code.
 8. **Env vars** (`web/.env.local`):
@@ -96,10 +94,14 @@ Billing_ integration, NOT a RevenueCat Web Billing config.
      (safe client-side; the REST read returns only one app user id's
      entitlements).
    - `NEXT_PUBLIC_REVENUECAT_ENTITLEMENT` — optional, defaults to `pro`.
-   - `NEXT_PUBLIC_CHECKOUT_TONIGHT_URL`
+   - `NEXT_PUBLIC_CHECKOUT_WEEKLY_URL`
    - `NEXT_PUBLIC_CHECKOUT_MONTHLY_URL`
    - `NEXT_PUBLIC_CHECKOUT_YEARLY_URL`
-9. **"Just Tonight" product type** — model as non-renewing / consumable
+   - `UNSEND_USAGE_SECRET` — server-only signing secret for the
+     content-free free-read cookie. If unset, the rewrite route falls back
+     to `OPENROUTER_API_KEY` for signing.
+9. **"Just Tonight" product type** — held for native; model as
+   non-renewing / consumable there
    so it can't read as a sneaky auto-renew (matters at native review).
 
 ## Sandbox testing checklist

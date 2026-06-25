@@ -37,7 +37,8 @@ cd web && npm install && npm run dev
 ```
 
 Engine env (`web/.env.local`, server-side only): `OPENROUTER_API_KEY`,
-`OPENROUTER_MODEL`, optional `OPENROUTER_FALLBACK_MODELS`. See
+`OPENROUTER_MODEL`, optional `OPENROUTER_FALLBACK_MODELS`, optional
+`UNSEND_USAGE_SECRET` for the signed free-read cookie. See
 [engine/README.md](engine/README.md) for the OpenRouter privacy
 checklist — required before the first real draft flows.
 

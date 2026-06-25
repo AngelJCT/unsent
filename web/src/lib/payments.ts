@@ -17,7 +17,7 @@ export type Sku = {
 // "Just Tonight" ($2.99 24h pass) is held for the native phase — a
 // one-time pass models cleanly on StoreKit/Play Billing but becomes a
 // "pay once, Pro forever" bug on Stripe web (one-time price → lifetime
-// entitlement). Web ships Monthly + Yearly only.
+// entitlement). Web ships Weekly + Monthly + Yearly only.
 export const SKUS: Sku[] = [
   {
     id: "weekly",
@@ -72,7 +72,7 @@ export async function startCheckout(
   plan: EntitlementPlan,
 ): Promise<
   | { ok: true; entitlement: EntitlementState; mode: "local" }
-  | { ok: true; mode: "redirect" }
+  | { ok: true; mode: "external" }
   | { ok: false; reason: "checkout_unavailable" }
 > {
   const url = checkoutUrl(plan);
@@ -89,8 +89,9 @@ export async function startCheckout(
       encodeURIComponent(getDeviceToken());
     const pkg = PACKAGE_IDS[plan];
     if (pkg) target.searchParams.set("package_id", pkg);
-    window.location.assign(target.toString());
-    return { ok: true, mode: "redirect" };
+    const opened = window.open(target.toString(), "_blank", "noopener,noreferrer");
+    if (!opened) window.location.assign(target.toString());
+    return { ok: true, mode: "external" };
   }
 
   if (canUseLocalCheckout()) {

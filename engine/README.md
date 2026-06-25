@@ -24,6 +24,7 @@ server code that ever touches a draft.
 | `OPENROUTER_API_KEY` | required |
 | `OPENROUTER_MODEL` | the chosen model, e.g. `vendor/model` — **still to be decided** |
 | `OPENROUTER_FALLBACK_MODELS` | optional, comma-separated fallback list |
+| `UNSEND_USAGE_SECRET` | optional server-only signing secret for the content-free free-read cookie; falls back to `OPENROUTER_API_KEY` when unset |
 
 ## OpenRouter privacy checklist (plan §3.2 — do all three)
 

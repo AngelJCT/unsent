@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Archive,
@@ -2157,6 +2157,7 @@ export default function Composer() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [resultTier, setResultTier] = useState<ResultTier>("first");
   const [unlocking, setUnlocking] = useState(false);
+  const [checkoutPending, setCheckoutPending] = useState(false);
   const [entitlement, setEntitlement] = useState<EntitlementState>(() =>
     getEntitlement(),
   );
@@ -2214,12 +2215,12 @@ export default function Composer() {
 
   // For "other", the typed recipient gives the engine real context
   // ("a landlord" writes differently than "an ex"); otherwise the label.
-  function recipientForEngine(): string {
+  const recipientForEngine = useCallback((): string => {
     if (category === "other" && customRecipient.trim()) {
       return customRecipient.trim();
     }
     return categoryLabel(category);
-  }
+  }, [category, customRecipient]);
 
   // Picking a recipient loads its remembered context: the saved note and
   // the last goal chosen for them (recipient memory — on-device).
@@ -2288,6 +2289,7 @@ export default function Composer() {
     setOutcome(null);
     setShowPaywall(false);
     setUnlocking(false);
+    setCheckoutPending(false);
     setCheckoutNote(null);
     setVaultNote(null);
     setRecipientNoteState("");
@@ -2307,6 +2309,7 @@ export default function Composer() {
     setOutcome(null);
     setShowPaywall(false);
     setUnlocking(false);
+    setCheckoutPending(false);
     setCheckoutNote(null);
     setVaultNote(null);
     setStage("compose");
@@ -2404,7 +2407,7 @@ export default function Composer() {
   // After a purchase/restore, generate the parts this draft didn't get for
   // free (generate-on-pay): the rewrite if it was a returning crisis, and
   // the tones. Same draft/recipient/goal, merged into the existing result.
-  async function unlockLockedParts() {
+  const unlockLockedParts = useCallback(async () => {
     if (!result || result.crisis) return;
     const needRewrite = !result.rewrite;
     const needTones = !result.tones;
@@ -2432,7 +2435,7 @@ export default function Composer() {
     } else {
       setCheckoutNote("Unlocked — but the versions didn't load. Try again in a moment.");
     }
-  }
+  }, [draft, goal, recipientForEngine, recipientNote, result]);
 
   function chooseOutcome(kind: SentOutcome) {
     recordFunnelEvent("cooldown_returned");
@@ -2451,6 +2454,13 @@ export default function Composer() {
       recordFunnelEvent("purchase_unlocked");
       setCheckoutNote("Unlocked. Every version is yours.");
       void unlockLockedParts();
+      return;
+    }
+    if (checkout.ok && checkout.mode === "external") {
+      setCheckoutPending(true);
+      setCheckoutNote(
+        "Checkout opened in a new tab. Finish there, then come back here — this draft will stay ready.",
+      );
       return;
     }
     if (!checkout.ok) {
@@ -2475,6 +2485,31 @@ export default function Composer() {
         : "No active pass found on this device.",
     );
   }
+
+  useEffect(() => {
+    if (!checkoutPending || entitlement.active) return;
+    let cancelled = false;
+
+    async function syncAfterCheckout() {
+      if (document.visibilityState === "hidden") return;
+      const restored = await syncEntitlement();
+      if (cancelled || !restored.active) return;
+      setCheckoutPending(false);
+      setEntitlement(restored);
+      setShowPaywall(false);
+      recordFunnelEvent("purchase_unlocked");
+      setCheckoutNote("Unlocked. Every version is yours.");
+      void unlockLockedParts();
+    }
+
+    window.addEventListener("focus", syncAfterCheckout);
+    document.addEventListener("visibilitychange", syncAfterCheckout);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", syncAfterCheckout);
+      document.removeEventListener("visibilitychange", syncAfterCheckout);
+    };
+  }, [checkoutPending, entitlement.active, unlockLockedParts]);
 
   function openVault(note: string | null = null) {
     setVaultLoading(true);

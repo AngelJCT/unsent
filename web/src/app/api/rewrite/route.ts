@@ -19,12 +19,27 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { SYSTEM_PROMPT } from "@/lib/engine/prompt";
+import {
+  requestedWant,
+  resolveRewriteWant,
+  type RewriteWant,
+} from "@/lib/server/rewrite-access";
 
 export const runtime = "edge";
 
 const MAX_DRAFT_CHARS = 4000;
+const MAX_REQUEST_BYTES = 16 * 1024;
 const ATTEMPT_TIMEOUT_MS = 6000;
 const TOKEN_LIMIT_PER_HOUR = 10;
+const USAGE_COOKIE = "unsent_usage_v1";
+const USAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
+const RC_KEY =
+  process.env.REVENUECAT_PUBLIC_API_KEY ??
+  process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_API_KEY;
+const ENTITLEMENT_ID =
+  process.env.REVENUECAT_ENTITLEMENT ??
+  process.env.NEXT_PUBLIC_REVENUECAT_ENTITLEMENT ??
+  "pro";
 
 const RECIPIENTS = new Set(["an ex", "boss", "family", "friend", "other"]);
 const FEELINGS = new Set(["hurt", "angry", "anxious", "done", "hopeful"]);
@@ -57,13 +72,14 @@ type EngineTones = { warm: string; final: string; unbothered: string };
 // Generation is scoped to entitlement (plan: generate-on-pay). `want`
 // decides which paid parts get generated AND returned — the server never
 // produces text the caller hasn't earned. mirror + crisis are always on.
-type Want = { rewrite: boolean; tones: boolean };
+type Want = RewriteWant;
 type EngineOut = {
   mirror: string;
   crisis: boolean;
   rewrite?: string;
   tones?: EngineTones;
 };
+type UsageState = { deviceHash: string; freeReads: number };
 
 const TONES_SCHEMA = {
   type: "object",
@@ -105,6 +121,203 @@ function responseFormat(want: Want) {
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlToBytes(value: string): Uint8Array {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+    Math.ceil(value.length / 4) * 4,
+    "=",
+  );
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function encodePayload(value: unknown): string {
+  return bytesToBase64Url(new TextEncoder().encode(JSON.stringify(value)));
+}
+
+function decodePayload(value: string): unknown {
+  return JSON.parse(new TextDecoder().decode(base64UrlToBytes(value)));
+}
+
+async function sign(value: string): Promise<string> {
+  const secret =
+    process.env.UNSEND_USAGE_SECRET ??
+    process.env.OPENROUTER_API_KEY ??
+    "dev-only-usage-secret";
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(value),
+  );
+  return bytesToBase64Url(new Uint8Array(signature));
+}
+
+async function deviceHash(deviceToken: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(deviceToken),
+  );
+  return bytesToBase64Url(new Uint8Array(digest)).slice(0, 32);
+}
+
+async function readUsage(
+  req: NextRequest,
+  deviceToken: string,
+): Promise<UsageState> {
+  const hash = await deviceHash(deviceToken);
+  const empty: UsageState = { deviceHash: hash, freeReads: 0 };
+  const raw = req.cookies.get(USAGE_COOKIE)?.value;
+  if (!raw) return empty;
+
+  const [payload, signature] = raw.split(".");
+  if (!payload || !signature || (await sign(payload)) !== signature) {
+    return empty;
+  }
+
+  try {
+    const parsed = decodePayload(payload) as {
+      v?: unknown;
+      d?: unknown;
+      r?: unknown;
+    };
+    if (parsed.v !== 1 || parsed.d !== hash) return empty;
+    return {
+      deviceHash: hash,
+      freeReads:
+        typeof parsed.r === "number" && Number.isFinite(parsed.r)
+          ? Math.max(0, Math.floor(parsed.r))
+          : 0,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+async function usageCookieValue(usage: UsageState): Promise<string> {
+  const payload = encodePayload({
+    v: 1,
+    d: usage.deviceHash,
+    r: usage.freeReads,
+  });
+  return `${payload}.${await sign(payload)}`;
+}
+
+async function jsonWithUsage(
+  body: unknown,
+  init: ResponseInit,
+  usage?: UsageState,
+) {
+  const response = NextResponse.json(body, init);
+  if (usage) {
+    response.cookies.set(USAGE_COOKIE, await usageCookieValue(usage), {
+      httpOnly: true,
+      maxAge: USAGE_COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
+  return response;
+}
+
+async function readBoundedJson(req: NextRequest): Promise<
+  | { ok: true; body: unknown }
+  | { ok: false; status: 400 | 413 | 415; error: string }
+> {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return { ok: false, status: 415, error: "bad_request" };
+  }
+
+  const declaredLength = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
+    return { ok: false, status: 413, error: "bad_request" };
+  }
+
+  const reader = req.body?.getReader();
+  if (!reader) return { ok: false, status: 400, error: "bad_request" };
+
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    received += value.byteLength;
+    if (received > MAX_REQUEST_BYTES) {
+      await reader.cancel();
+      return { ok: false, status: 413, error: "bad_request" };
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return {
+      ok: true,
+      body: JSON.parse(new TextDecoder().decode(bytes)),
+    };
+  } catch {
+    return { ok: false, status: 400, error: "bad_request" };
+  }
+}
+
+function canUseDevEntitlement(req: NextRequest): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+  if (req.headers.get("x-unsent-dev-entitlement") !== "local") return false;
+  const origin = req.headers.get("origin") ?? "";
+  return (
+    origin.startsWith("http://localhost") ||
+    origin.startsWith("http://127.0.0.1")
+  );
+}
+
+async function isRevenueCatEntitled(deviceToken: string): Promise<boolean> {
+  if (!RC_KEY) return false;
+  try {
+    const res = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(deviceToken)}`,
+      {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${RC_KEY}` },
+      },
+    );
+    if (!res.ok) return false;
+    const data = await res.json();
+    const ent = data?.subscriber?.entitlements?.[ENTITLEMENT_ID] as
+      | { expires_date?: string | null }
+      | undefined;
+    if (!ent) return false;
+    if (!ent.expires_date) return true;
+    const expires = Date.parse(ent.expires_date);
+    return Number.isFinite(expires) && expires > Date.now();
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Strip fences, find the JSON object, validate shape. Null = malformed.
@@ -197,7 +410,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
-  let body: {
+  const parsedBody = await readBoundedJson(req);
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      { error: parsedBody.error },
+      { status: parsedBody.status },
+    );
+  }
+  const body = parsedBody.body as {
     draft?: unknown;
     recipient?: unknown;
     feeling?: unknown;
@@ -205,11 +425,6 @@ export async function POST(req: NextRequest) {
     context?: unknown;
     want?: unknown;
   };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "bad_request" }, { status: 400 });
-  }
   const { draft } = body;
   if (
     typeof draft !== "string" ||
@@ -242,18 +457,20 @@ export async function POST(req: NextRequest) {
   // context is the user's optional on-device recipient note (Pro). Bounded
   // free text; like everything else in the user message it's data, never an
   // instruction, and it's never logged here.
-  const context =
+  const rawContext =
     typeof body.context === "string" && body.context.trim()
       ? body.context.trim().replace(/\s+/g, " ").slice(0, 120)
       : null;
 
-  // What the caller may receive. Defaults to the full set so a plain
-  // request still behaves; the client narrows it per entitlement tier.
-  const wantRaw = (body.want ?? {}) as { rewrite?: unknown; tones?: unknown };
-  const want: Want = {
-    rewrite: wantRaw.rewrite !== false,
-    tones: wantRaw.tones !== false,
-  };
+  const usage = await readUsage(req, deviceToken);
+  const isEntitled =
+    canUseDevEntitlement(req) || (await isRevenueCatEntitled(deviceToken));
+  const context = isEntitled ? rawContext : null;
+  const want = resolveRewriteWant({
+    requested: requestedWant(body.want),
+    isEntitled,
+    freeReads: usage.freeReads,
+  });
 
   if (!process.env.OPENROUTER_API_KEY || modelList().length === 0) {
     return NextResponse.json({ error: "engine_unavailable" }, { status: 503 });
@@ -276,7 +493,11 @@ export async function POST(req: NextRequest) {
       if (out.crisis) {
         return NextResponse.json({ mirror: "", crisis: true });
       }
-      return NextResponse.json(out);
+      return jsonWithUsage(
+        out,
+        { status: 200 },
+        { ...usage, freeReads: usage.freeReads + 1 },
+      );
     }
   }
   return NextResponse.json({ error: "engine_unavailable" }, { status: 503 });

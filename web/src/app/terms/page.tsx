@@ -61,8 +61,8 @@ export default function TermsPage() {
 
       <Section title="Pro subscriptions & billing">
         <p>
-          Pro is offered as Monthly and Yearly subscriptions. Payment is
-          processed by Stripe as merchant of record. Subscriptions
+          Pro is offered as Weekly, Monthly, and Yearly subscriptions. Payment
+          is processed by Stripe as merchant of record. Subscriptions
           automatically renew at the then-current price until you cancel.
         </p>
         <ul className="mt-3 list-disc space-y-2 pl-5">
