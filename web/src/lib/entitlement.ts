@@ -34,6 +34,41 @@ export function isRemoteEntitlementEnabled(): boolean {
   return Boolean(RC_KEY);
 }
 
+const DEV_PRO_KEY = "unsent.dev-pro";
+
+function isDevHost(): boolean {
+  if (typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1"].includes(window.location.hostname);
+}
+
+/**
+ * Dev-only Pro override. Set `localStorage["unsent.dev-pro"]` to a plan
+ * ("weekly" | "monthly" | "yearly") or "1" to force Pro WITHOUT paying,
+ * bypassing the remote check entirely. Gated to localhost, so it can never
+ * unlock Pro on the deployed app even if the flag is present there. Clear
+ * the key (or use the dev reset) to go back to free.
+ */
+function devProOverride(): EntitlementState | null {
+  if (!isDevHost()) return null;
+  let flag: string | null = null;
+  try {
+    flag = localStorage.getItem(DEV_PRO_KEY);
+  } catch {
+    return null;
+  }
+  if (!flag) return null;
+  const plan: EntitlementPlan =
+    flag === "weekly" || flag === "yearly" || flag === "tonight"
+      ? flag
+      : "monthly";
+  return {
+    active: true,
+    plan,
+    expiresAt: new Date(Date.now() + 365 * DAY_MS).toISOString(),
+    source: "local_phase2",
+  };
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -89,6 +124,11 @@ type RcSubscription = {
  * falls back to the cached value so the ritual is never blocked.
  */
 export async function syncEntitlement(): Promise<EntitlementState> {
+  const dev = devProOverride();
+  if (dev) {
+    writeEntitlementCache(dev);
+    return dev;
+  }
   if (!RC_KEY) return getEntitlement();
   try {
     const token = getDeviceToken();

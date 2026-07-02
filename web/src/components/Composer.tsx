@@ -467,7 +467,7 @@ function RecipientStep({
   return (
     <motion.section key="recipient" {...motionPreset} className="flex flex-1 flex-col pb-10">
       <div className="flex justify-center py-2">
-        <ProgressDots step={0} total={3} />
+        <ProgressDots step={1} total={3} />
       </div>
       <h1 className="mt-6 font-brand text-4xl italic tracking-tight">
         Who&apos;s on the other end?
@@ -534,7 +534,7 @@ function GoalStep({
   return (
     <motion.section key="goal" {...motionPreset} className="flex flex-1 flex-col pb-10">
       <div className="flex justify-center py-2">
-        <ProgressDots step={1} total={3} />
+        <ProgressDots step={2} total={3} />
       </div>
       <h1 className="mt-6 font-brand text-4xl italic tracking-tight">
         What do you want out of this?
@@ -609,6 +609,8 @@ function ComposeScreen({
   error,
   ready,
   isPro,
+  rewriteSpent,
+  guided,
   recipientNote,
   onDraft,
   onCategory,
@@ -626,6 +628,8 @@ function ComposeScreen({
   error: EngineError | null;
   ready: boolean;
   isPro: boolean;
+  rewriteSpent: boolean;
+  guided: boolean;
   recipientNote: string;
   onDraft: (value: string) => void;
   onCategory: (value: CategoryId | null) => void;
@@ -659,15 +663,22 @@ function ComposeScreen({
         className="mt-6 min-h-56 w-full flex-1 resize-none rounded-2xl border border-paper-border bg-paper p-4 text-base leading-relaxed text-ink placeholder:text-ash focus:border-ash focus:outline-none"
       />
 
-      <CategoryPicker
-        value={category}
-        customRecipient={customRecipient}
-        onChange={onCategory}
-        onCustomRecipient={onCustomRecipient}
-      />
-      <GoalPicker category={category} value={goal} onChange={onGoal} />
+      {/* Guided first-timers get the draft box alone — who it's for and
+          what they want come as dedicated steps right after, one question
+          per screen. */}
+      {!guided && (
+        <>
+          <CategoryPicker
+            value={category}
+            customRecipient={customRecipient}
+            onChange={onCategory}
+            onCustomRecipient={onCustomRecipient}
+          />
+          <GoalPicker category={category} value={goal} onChange={onGoal} />
+        </>
+      )}
 
-      {isPro && category && (
+      {!guided && isPro && category && (
         <div className="mt-5">
           <label
             htmlFor="recipient-note"
@@ -704,7 +715,7 @@ function ComposeScreen({
               transition={motionPreset.transition}
               className="w-full rounded-2xl bg-ink py-4 text-base font-medium text-canvas transition-colors hover:bg-ash-deep"
             >
-              Show me the mirror
+              {guided ? "Continue" : "Show me the mirror"}
             </motion.button>
           )}
         </AnimatePresence>
@@ -723,6 +734,12 @@ function ComposeScreen({
           </p>
         )}
       </div>
+
+      {rewriteSpent && (
+        <p className="mb-3 font-receipt text-xs leading-relaxed text-ash">
+          Mirror&apos;s always free. Your free rewrite was spent.
+        </p>
+      )}
 
       <PrivacyLine>
         An AI service rewrites your draft, then it&apos;s gone. Not stored,
@@ -1042,13 +1059,13 @@ function ResultScreen({
               onClick={onUnlock}
               className="mt-4 block w-full text-left"
             >
-              <p
-                aria-hidden
-                className="select-none break-words font-brand text-lg italic leading-relaxed opacity-80 blur-[6px]"
-              >
-                {result.rewrite ?? REWRITE_TEASER}
+              <p className="font-brand text-lg italic leading-relaxed text-canvas/90">
+                The calm version is Pro.
               </p>
-              <span className="mt-4 flex items-center gap-2 font-receipt text-xs uppercase tracking-wider text-ember">
+              <p className="mt-2 font-brand text-lg italic leading-relaxed text-canvas/90">
+                A year costs less than one message you can&apos;t take back.
+              </p>
+              <span className="mt-4 flex items-center gap-2 font-receipt text-xs uppercase tracking-wider text-ash-deep">
                 <Lock size={14} strokeWidth={1.5} />
                 {unlocking ? "Unlocking…" : "Unlock the calm version"}
               </span>
@@ -1084,7 +1101,6 @@ function ResultScreen({
         <div className="mt-3 flex flex-col gap-3">
           {TONES.map((tone) => {
             const real = result.tones?.[tone.key];
-            const teaser = "the calmer version, said another way";
             return (
               <div
                 key={tone.key}
@@ -1093,9 +1109,6 @@ function ResultScreen({
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-receipt text-xs uppercase tracking-wider text-ink">
                     {tone.label}
-                  </span>
-                  <span className="font-receipt text-[10px] lowercase tracking-wide text-ash">
-                    {tone.note}
                   </span>
                 </div>
                 {tonesUnlocked ? (
@@ -1125,11 +1138,8 @@ function ResultScreen({
                       strokeWidth={1.5}
                       className="mt-1 shrink-0 text-ash"
                     />
-                    <span
-                      aria-hidden
-                      className="select-none break-words text-sm leading-relaxed text-ash-deep blur-[5px]"
-                    >
-                      {teaser}
+                    <span className="text-sm leading-relaxed text-ash-deep">
+                      {tone.note}
                     </span>
                   </button>
                 )}
@@ -1719,6 +1729,19 @@ function VaultScreen({
   );
 }
 
+// One dry line per receipt, tuned to who almost got the message.
+const ESTIMATED_SAVINGS: Record<CategoryId, string> = {
+  ex: "1 CLEAN BREAK",
+  boss: "1 PAYCHECK",
+  family: "1 THANKSGIVING",
+  friend: "1 FRIENDSHIP",
+  other: "1 RELATIONSHIP",
+};
+
+function estimatedSavings(category: CategoryId | null) {
+  return category ? ESTIMATED_SAVINGS[category] : "1 RELATIONSHIP";
+}
+
 function redactionWidth(word: string) {
   const letters = word.replace(/[^\p{L}\p{N}]/gu, "").length;
   return Math.max(24, Math.min(104, 18 + letters * 8));
@@ -1748,7 +1771,7 @@ function ReceiptPanel({
     ["EXCLAMATION PTS", String(stats.exclamations)],
     ["RHETORICAL ?S", String(stats.questions)],
     ["STATUS", "BURNED"],
-    ["EST. SAVINGS", "1 FRIENDSHIP"],
+    ["EST. SAVINGS", estimatedSavings(category)],
   ];
 
   async function receiptBlob() {
@@ -2168,7 +2191,14 @@ export default function Composer() {
   const [vaultNote, setVaultNote] = useState<string | null>(null);
   // Recipient memory (Pro): an editable on-device note about who this is.
   const [recipientNote, setRecipientNoteState] = useState("");
+  // First-timer guided flow: draft first, then who it's for, then the goal.
+  // Set when the arrival CTA is pressed; a share-target arrival skips it.
+  const [guided, setGuided] = useState(false);
+  // Returning free reader: the mirror stays free, the rewrite is locked.
+  // Said upfront on the composer so the result screen holds no surprise.
+  const [rewriteSpent, setRewriteSpent] = useState(false);
   const [devHost, setDevHost] = useState(false);
+  const [devProOn, setDevProOn] = useState(false);
   const reduceMotion = useReducedMotion();
 
   const isPro = entitlement.active;
@@ -2245,15 +2275,32 @@ export default function Composer() {
     setDevHost(
       ["localhost", "127.0.0.1"].includes(window.location.hostname),
     );
+    try {
+      setDevProOn(Boolean(localStorage.getItem("unsent.dev-pro")));
+    } catch {}
 
-    // Returning from an external checkout (?checkout=success): strip the
-    // params so they don't linger, then the entitlement sync below
-    // recognizes the now-Pro device.
+    // Returning from an external checkout (?checkout=success), or arriving
+    // from the OS share sheet (Web Share Target: ?text=…): read what we
+    // need, then strip the params so they don't linger.
     const params = new URLSearchParams(window.location.search);
+    // A shared draft lands in `text` (some apps only fill `title`). The
+    // shared `url` is never a draft, so it's stripped but ignored.
+    const sharedDraft =
+      (params.get("text") ?? params.get("title"))?.trim() || null;
+    let stripped = false;
     if (params.has("checkout")) {
       params.delete("checkout");
       params.delete("plan");
       params.delete("device");
+      stripped = true;
+    }
+    for (const key of ["text", "title", "url"]) {
+      if (params.has(key)) {
+        params.delete(key);
+        stripped = true;
+      }
+    }
+    if (stripped) {
       const qs = params.toString();
       window.history.replaceState(
         {},
@@ -2261,6 +2308,7 @@ export default function Composer() {
         window.location.pathname + (qs ? `?${qs}` : ""),
       );
     }
+    if (sharedDraft) setDraft(sharedDraft);
 
     let active = true;
     // Ask the source of truth "is THIS device Pro?" — the device token is
@@ -2268,8 +2316,11 @@ export default function Composer() {
     syncEntitlement().then((ent) => {
       if (!active) return;
       setEntitlement(ent);
+      setRewriteSpent(!ent.active && getReadCount() > 0);
       const firstTimer = !ent.active && getReadCount() === 0;
-      setStage(firstTimer ? "arrival" : "compose");
+      // A shared draft means they're mid-crisis: straight to the composer,
+      // no onboarding in the way.
+      setStage(sharedDraft || !firstTimer ? "compose" : "arrival");
     });
     return () => {
       active = false;
@@ -2278,6 +2329,8 @@ export default function Composer() {
 
   function resetFlow() {
     setStage(entryStage());
+    setGuided(false);
+    setRewriteSpent(!getEntitlement().active && getReadCount() > 0);
     setDraft("");
     setCategory(null);
     setCustomRecipient("");
@@ -2289,6 +2342,7 @@ export default function Composer() {
     setOutcome(null);
     setShowPaywall(false);
     setUnlocking(false);
+    setResultTier("first");
     setCheckoutPending(false);
     setCheckoutNote(null);
     setVaultNote(null);
@@ -2312,10 +2366,15 @@ export default function Composer() {
     setCheckoutPending(false);
     setCheckoutNote(null);
     setVaultNote(null);
+    setGuided(false);
     setStage("compose");
   }
 
-  async function showMirror() {
+  // In the guided first-timer flow the goal is picked *after* the draft,
+  // right before the mirror — React state hasn't flushed yet, so the
+  // freshly picked goal arrives as an override.
+  async function showMirror(goalOverride?: string | null) {
+    const effectiveGoal = goalOverride === undefined ? goal : goalOverride;
     if (!ready) return;
     setError(null);
     setCopiedKey(null);
@@ -2364,7 +2423,7 @@ export default function Composer() {
       draft,
       recipient: recipientForEngine(),
       feeling: null,
-      goal,
+      goal: effectiveGoal,
       context,
       want,
     });
@@ -2436,6 +2495,17 @@ export default function Composer() {
       setCheckoutNote("Unlocked — but the versions didn't load. Try again in a moment.");
     }
   }, [draft, goal, recipientForEngine, recipientNote, result]);
+
+  // Draft first, context after: a guided first-timer who hasn't picked a
+  // recipient inline goes through "who is it for" → "what do you want"
+  // before the mirror. Everyone else goes straight to the read.
+  function handleComposeSubmit() {
+    if (guided) {
+      setStage("recipient");
+      return;
+    }
+    void showMirror();
+  }
 
   function chooseOutcome(kind: SentOutcome) {
     recordFunnelEvent("cooldown_returned");
@@ -2547,6 +2617,22 @@ export default function Composer() {
     window.location.reload();
   }
 
+  // Dev only (localhost) — flip the Pro override so you can exercise paid
+  // features without paying. The flag is read by syncEntitlement, which is
+  // gated to localhost, so it can never unlock Pro on the deployed app.
+  function toggleDevPro() {
+    try {
+      if (localStorage.getItem("unsent.dev-pro")) {
+        localStorage.removeItem("unsent.dev-pro");
+      } else {
+        localStorage.setItem("unsent.dev-pro", "monthly");
+      }
+    } catch {
+      // storage unavailable — nothing to toggle
+    }
+    window.location.reload();
+  }
+
   function startBurn() {
     recordFunnelEvent("burn_started");
     setCounts(recordDecision("burned"));
@@ -2566,7 +2652,7 @@ export default function Composer() {
 
   function goBack() {
     if (stage === "recipient") {
-      setStage("arrival");
+      setStage("compose");
       return;
     }
     if (stage === "goal") {
@@ -2595,7 +2681,10 @@ export default function Composer() {
           {stage === "arrival" && (
             <ArrivalScreen
               motionPreset={motionPreset}
-              onStart={() => setStage("recipient")}
+              onStart={() => {
+                setGuided(true);
+                setStage("compose");
+              }}
               onSample={startSample}
             />
           )}
@@ -2622,11 +2711,11 @@ export default function Composer() {
               value={goal}
               onPick={(g) => {
                 pickGoal(g);
-                setStage("compose");
+                void showMirror(g);
               }}
               onSkip={() => {
                 pickGoal(null);
-                setStage("compose");
+                void showMirror(null);
               }}
             />
           )}
@@ -2641,6 +2730,8 @@ export default function Composer() {
               error={error}
               ready={ready}
               isPro={isPro}
+              rewriteSpent={rewriteSpent && !isSample}
+              guided={guided}
               recipientNote={recipientNote}
               onDraft={(value) => {
                 setDraft(value);
@@ -2650,7 +2741,7 @@ export default function Composer() {
               onCustomRecipient={setCustomRecipient}
               onGoal={pickGoal}
               onRecipientNote={setRecipientNoteState}
-              onSubmit={showMirror}
+              onSubmit={handleComposeSubmit}
               onSample={startSample}
             />
           )}
@@ -2668,7 +2759,7 @@ export default function Composer() {
                 draft={draft}
                 category={category}
                 copiedKey={copiedKey}
-                rewriteLocked={resultTier === "returning" && !entitlement.active}
+                rewriteLocked={!entitlement.active && !result.rewrite}
                 tonesUnlocked={entitlement.active}
                 unlocking={unlocking}
                 showPaywall={showPaywall}
@@ -2770,15 +2861,31 @@ export default function Composer() {
       </footer>
 
       {devHost && (
-        <button
-          type="button"
-          onClick={resetToFirstRun}
-          title="Dev: wipe local state + Vault, reload as a first-timer"
-          className="fixed bottom-3 right-3 z-50 flex items-center gap-1.5 rounded-full border border-paper-border bg-paper/80 px-3 py-1.5 font-receipt text-[10px] uppercase tracking-wider text-ash backdrop-blur transition-colors hover:text-ash-deep"
-        >
-          <RotateCcw size={12} strokeWidth={1.5} />
-          reset (dev)
-        </button>
+        <div className="fixed bottom-3 right-3 z-50 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleDevPro}
+            title="Dev: force Pro on this device without paying (localhost only)"
+            className={classNames(
+              "flex items-center gap-1.5 rounded-full border bg-paper/80 px-3 py-1.5 font-receipt text-[10px] uppercase tracking-wider backdrop-blur transition-colors",
+              devProOn
+                ? "border-burn text-burn hover:text-ash-deep"
+                : "border-paper-border text-ash hover:text-ash-deep",
+            )}
+          >
+            <Crown size={12} strokeWidth={1.5} />
+            {devProOn ? "pro on (dev)" : "go pro (dev)"}
+          </button>
+          <button
+            type="button"
+            onClick={resetToFirstRun}
+            title="Dev: wipe local state + Vault, reload as a first-timer"
+            className="flex items-center gap-1.5 rounded-full border border-paper-border bg-paper/80 px-3 py-1.5 font-receipt text-[10px] uppercase tracking-wider text-ash backdrop-blur transition-colors hover:text-ash-deep"
+          >
+            <RotateCcw size={12} strokeWidth={1.5} />
+            reset (dev)
+          </button>
+        </div>
       )}
     </div>
   );

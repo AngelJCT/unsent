@@ -17,5 +17,17 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/x-icon",
       },
     ],
+    // Web Share Target (Android / installed PWA): any app's share sheet can
+    // send a draft straight into the composer. iOS ignores this — the native
+    // Share Extension covers it there (development plan, Phase 3).
+    share_target: {
+      action: "/",
+      method: "GET",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+      },
+    },
   };
 }

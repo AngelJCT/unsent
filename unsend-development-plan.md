@@ -305,13 +305,19 @@ No user table. No message table. No email at signup. The first identity event in
 **W3.7 — Native Receipt share**
 - [ ] Render and share the Receipt via the native share sheet; confirm image generation stays on-device.
 
-**W3.8 — Store readiness & compliance (P0 items)**
+**W3.8 — Share-sheet entry (iOS parity)**
+- [ ] The PWA already registers a **Web Share Target** (`manifest.ts`), so on Android a draft can be shared from any app straight into the composer — but iOS does not support Web Share Targets, so the native app must close this gap.
+- [ ] Build an iOS **Share Extension** so "Unsend." appears in the share sheet: selected/shared text lands pre-filled in the composer, **skipping onboarding entirely** (a share arrival is mid-crisis; match the web behavior — no arrival screen, no guided steps in the way).
+- [ ] Android native: register the equivalent share intent filter so the Expo app matches (and eventually replaces) the PWA's share target.
+- [ ] Reuse the shared engine client, safety pre-pass, and no-log proxy — this is a new *entry point*, not a new backend. Verify the crisis path fires on shared drafts too.
+
+**W3.9 — Store readiness & compliance (P0 items)**
 - [ ] Privacy nutrition labels / Data Safety form — fill them to match the §4 reality (no message storage; AI processing disclosed).
 - [ ] Age rating; ensure the crisis-resource path is present and discoverable (both stores scrutinize wellbeing apps for this).
 - [ ] Subscription metadata, restore, terms/privacy links, paywall compliance (clear pricing, no dark patterns).
 - [ ] App icon, screenshots, listing copy in-brand.
 
-**W3.9 — Submit**
+**W3.10 — Submit**
 - [ ] Submit iOS + Android. Budget real calendar time for review, especially around subscriptions and the wellbeing classification. Have the safety path and privacy labels airtight before submitting.
 
 **Gate / DoD:** native install→mirror parity with web, clean store approval, web→native entitlement carry-over verified. Don't start Phase 4 until you're live and stable.
@@ -322,11 +328,11 @@ No user table. No message table. No email at signup. The first identity event in
 **Goal:** catch the rage *inside* the messaging app, before the app-switch — the one move that removes the last step where users still send the thing. Genuinely hard, which is why it's last.
 
 **W4.1 — iOS Share Extension**
-- [ ] Build a Share Extension so a user can select draft text in Messages and send it to Unsend's mirror without fully leaving the conversation.
+- [ ] Shipped in W3.8 as basic share-sheet entry. This phase deepens it: a user can select draft text in Messages and reach the mirror without fully leaving the conversation (inline-first UX, not just app hand-off).
 - [ ] Reuse the shared engine client + the same no-log proxy — this is a new *entry point*, not a new backend.
 
 **W4.2 — Android share target**
-- [ ] Implement the equivalent Android share intent / direct-share target.
+- [ ] The web share target (PWA manifest) and the W3.8 native intent already cover the basics. This phase adds **direct-share** targets (recipient-specific shortcuts in the share sheet) if the data supports it.
 
 **W4.3 — Custom keyboard (stretch)**
 - [ ] A custom keyboard extension that can summon the mirror inline is the deepest version. Treat as stretch — keyboard extensions are fiddly and have their own review scrutiny. Validate demand with the share extension first.
